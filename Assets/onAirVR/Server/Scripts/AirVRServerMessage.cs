@@ -58,6 +58,7 @@ public class AirVRServerMessage : AirVRMessage {
 
     // Type : Event, From : InputStream, Name : RemoteInputDeviceRegistered
     public string DeviceName;
+    public string Arguments;
 
     private bool isEventFrom(string fromWhat) {
         if (string.IsNullOrEmpty(Type) || string.IsNullOrEmpty(From) || string.IsNullOrEmpty(Name)) {

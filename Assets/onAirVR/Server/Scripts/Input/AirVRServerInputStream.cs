@@ -53,7 +53,7 @@ public class AirVRServerInputStream : AirVRInputStream {
     private static extern void onairvr_ResetInput(int playerID);
 
     public AirVRServerInputStream() {
-        addInputDevice(new AirVRHeadTrackerInputDevice());
+        addInputDevice(new AirVRPredictedHeadTrackerInputDevice());
         addInputDevice(new AirVRTouchpadInputDevice());
         addInputDevice(new AirVRGamepadInputDevice());
         addInputDevice(new AirVRTrackedControllerInputDevice());

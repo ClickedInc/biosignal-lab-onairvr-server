@@ -26,7 +26,7 @@ public abstract class AirVRInputBase {
         }
     }
 
-    public virtual void OnRegistered(byte inDeviceID) {
+    public virtual void OnRegistered(byte inDeviceID, string arguments = "") {
         deviceID = inDeviceID;
     }
 
@@ -125,9 +125,9 @@ public abstract class AirVRInputStream {
         }
     }
 
-    public void HandleRemoteInputDeviceRegistered(string deviceName, byte deviceID) {
+    public void HandleRemoteInputDeviceRegistered(string deviceName, byte deviceID, string arguments) {
         if (receivers.ContainsKey(deviceName) && receivers[deviceName].isRegistered == false) {
-            receivers[deviceName].OnRegistered(deviceID);
+            receivers[deviceName].OnRegistered(deviceID, arguments);
         }
     }
 

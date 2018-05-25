@@ -355,5 +355,7 @@ public class AirVRServer : MonoBehaviour {
 
             onairvr_Shutdown();
         }
+
+        NetMQ.NetMQConfig.Cleanup(false);
     }
 }

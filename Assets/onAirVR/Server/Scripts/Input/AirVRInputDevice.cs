@@ -112,17 +112,26 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
             get {
                 return _timeStamp;
             }
+            set {
+                _timeStamp = value;
+            }
         }
 
         public Vector3 position {
             get {
                 return _position;
             }
+            set {
+                _position = value;
+            }
         }
 
         public Quaternion orientation {
             get {
                 return _orientation;
+            }
+            set {
+                _orientation = value;
             }
         }
 
@@ -215,6 +224,13 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
 
     protected void AddExtControlButton(byte controlID) {
         _extControls.Add(controlID, new Button());
+    }
+
+    protected void OverrideControlTransform(byte controlID, double timeStamp, Vector3 position, Quaternion orientation) {
+        Assert.IsTrue(_controls.ContainsKey(controlID));
+        _controls[controlID].AsTransform().timeStamp = timeStamp;
+        _controls[controlID].AsTransform().position = position;
+        _controls[controlID].AsTransform().orientation = orientation;
     }
 
     protected void SetExtControlAxis3D(byte controlID, Vector3 value) {

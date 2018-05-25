@@ -244,7 +244,7 @@ public abstract class AirVRCameraRig : MonoBehaviour {
     private void onAirVRInputStreamRemoteInputDeviceRegistered(AirVRServerMessage message) {
         Assert.IsTrue(string.IsNullOrEmpty(message.DeviceName) == false);
 
-        inputStream.HandleRemoteInputDeviceRegistered(message.DeviceName, (byte)message.DeviceID);
+        inputStream.HandleRemoteInputDeviceRegistered(message.DeviceName, (byte)message.DeviceID, message.Arguments);
     }
 
     private void onAirVRInputStreamRemoteInputDeviceUnregistered(AirVRServerMessage message) {
