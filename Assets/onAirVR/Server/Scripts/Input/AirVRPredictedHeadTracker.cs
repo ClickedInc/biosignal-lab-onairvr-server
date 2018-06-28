@@ -67,7 +67,7 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
             if (BitConverter.IsLittleEndian) {
                 Array.Reverse(_msgRecv.Data, 0, 8);
-                for (int i = 0; i < 8; i++) {
+                for (int i = 0; i < 9; i++) {
                     Array.Reverse(_msgRecv.Data, 8 + i * 4, 4);
                 }
             }
