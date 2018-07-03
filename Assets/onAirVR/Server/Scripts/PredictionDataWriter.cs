@@ -56,10 +56,10 @@ public class PredictionDataWriter : MonoBehaviour, AirVRPredictedHeadTrackerInpu
 
                     foreach (var data in datas)
                     {
-                        columns.Add(data.timeStamp.ToString()); // Name
-                        columns.Add(data.predicted.ToString()); // Level
-                        columns.Add(data.predictionTime.ToString()); // Hp
-                        columns.Add(data.original.ToString()); // Int
+                        columns.Add(data.timeStamp.ToString());
+                        columns.Add(data.predicted.ToString("F7"));
+                        columns.Add(data.predictionTime.ToString());
+                        columns.Add(data.original.ToString("F7"));
                         writer.WriteRow(columns);
                         columns.Clear();
                     }
