@@ -83,9 +83,10 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
                                               BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 6),
                                               BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 7),
                                               BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 8));
-            if (eventHandler != null)
-                eventHandler.OnReceivedPredictionServerData(_lastTimeStamp, _lastOrientation, _predictionTime, _originalOrientation);
         }
+
+        if (eventHandler != null)
+            eventHandler.OnReceivedPredictionServerData(_lastTimeStamp, _lastOrientation, _predictionTime, _originalOrientation);
 
         OverrideControlTransform((byte)AirVRHeadTrackerKey.Transform, _lastTimeStamp, _lastOrientation * _lastCenterEyePosition, _lastOrientation);
     }
