@@ -80,7 +80,6 @@ public class CaptureManager : MonoBehaviour {
     private Text _textCaptureOutputPath;
     private Button _buttonPlay;
     private Text _textButtonPlay;
-    private InputField _inputMaxCaptureFrameNumber;
     private Button _buttonCapture;
     private Text _textButtonCapture;
 
@@ -89,7 +88,6 @@ public class CaptureManager : MonoBehaviour {
         _textCaptureOutputPath = transform.Find("Canvas/Panel/CaptureOutputPath/Value").GetComponent<Text>();
         _buttonPlay = transform.Find("Canvas/Panel/Play").GetComponent<Button>();
         _textButtonPlay = transform.Find("Canvas/Panel/Play/Text").GetComponent<Text>();
-        _inputMaxCaptureFrameNumber = transform.Find("Canvas/Panel/MaxCaptureFrameNumber").GetComponent<InputField>();
         _buttonCapture = transform.Find("Canvas/Panel/Capture").GetComponent<Button>();
         _textButtonCapture = transform.Find("Canvas/Panel/Capture/Text").GetComponent<Text>();
     }
@@ -124,13 +122,23 @@ public class CaptureManager : MonoBehaviour {
         _playbackCamera.SetPlaybackMode((MotionPredictionPlaybackCamera.PlaybackMode)mode);
     }
 
-    public void SetMaxCaptureFrameNumber(string value) {
-        int parsed = int.MaxValue;
+    public void SetPlaybackRangeFrom(string value) {
+        int parsed = 0;
         if (int.TryParse(value, out parsed)) {
-            _playbackCamera.SetMaxCaptureFrameNumber(parsed > 0 ? parsed : int.MaxValue);
+            _playbackCamera.SetPlaybackRangeFrom(parsed > 0 ? parsed : 0);
         }
         else {
-            _playbackCamera.SetMaxCaptureFrameNumber(int.MaxValue);
+            _playbackCamera.SetPlaybackRangeFrom(0);
+        }
+    }
+
+    public void SetPlaybackRangeTo(string value) {
+        int parsed = int.MaxValue;
+        if (int.TryParse(value, out parsed)) {
+            _playbackCamera.SetPlaybackRangeTo(parsed > 0 ? parsed : int.MaxValue);
+        }
+        else {
+            _playbackCamera.SetPlaybackRangeTo(int.MaxValue);
         }
     }
 

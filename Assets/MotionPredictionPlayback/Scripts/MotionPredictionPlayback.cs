@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class MotionPredictionPlayback : MonoBehaviour {
-    public string csvPath = "Assets/MotionPredictionPlayback/test.csv";
-    public int captureLength = 100;
-    public int estimatedDelayTime = 100;
-    public string captureOutputPath = "CaptureOutput";
+    //public string csvPath = "Assets/MotionPredictionPlayback/test.csv";
+    //public string captureOutputPath = "CaptureOutput";
 
     [HideInInspector]
     public bool playbackModeStartedByEditor;

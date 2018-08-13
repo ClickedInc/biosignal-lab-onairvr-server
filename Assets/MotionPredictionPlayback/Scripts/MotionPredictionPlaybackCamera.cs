@@ -6,9 +6,8 @@ using UnityEngine;
 using UnityEditor;
 
 public class MotionPredictionPlaybackCamera : MonoBehaviour {
-    private int maxCaptureFrameNumber = int.MaxValue;
-    private int estimatedDelayTime;
-    private int qf;
+    private int playbackRangeFrom = 0;
+    private int playbackRangeTo = int.MaxValue;
     private int qh;
     private int captureNum;
     private string csvPath;
@@ -52,9 +51,8 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         StartCoroutine(SimulationControl());
     }
 
-    private int LatencyFrameCirculate(int latencyTime, int inputFramerate) {
-        int latencyFrame = (latencyTime * inputFramerate) / 1000;
-        return latencyFrame;
+    private int LatencyFrameCirculate(double latencyTime, int inputFramerate) {
+        return (int)(latencyTime * inputFramerate / 1000);
     }
 
     private string playbackModeDescription(PlaybackMode mode) {
@@ -79,6 +77,11 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Quaternion rotationQF = Quaternion.identity;
         Quaternion rotationQH = Quaternion.identity;
 
+        int qf = qh - LatencyFrameCirculate((double)data[num]["prediction_time"], 120);  // assume input motion data rate is 120 fps
+        if (qf < 0) {
+            qf = 0;
+        }
+
         if (parseRotateDataSetting(usePredict, qf, ref rotationQF) == false ||
             parseRotateDataSetting(false, qh, ref rotationQH) == false) {
             return;
@@ -96,7 +99,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             leftCaptureCamera.Render();
             rightCaptureCamera.Render();
 
-            if (qf < maxCaptureFrameNumber) {
+            if (qh <= playbackRangeTo) {
                 captureManager.CaptureScreenshot((double)data[qf]["timestamp"], playbackModeDescription(mode), num);
             }
         }
@@ -110,8 +113,6 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
 
         if (playbackState == PlaybackState.Playing) {
-            captureNum++;
-
             Simulate(captureNum, playbackMode, false);
         }
         else if (playbackState == PlaybackState.Capturing) {
@@ -120,13 +121,10 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             }
         }
 
-        if (qh++ >= LatencyFrameCirculate(estimatedDelayTime, 120))  // assume input motion data rate is 120 fps
-        {
-            qf++;
-        }
+        captureNum++;
+        qh++;
 
-        if (qh >= data.Count || 
-            (playbackState == PlaybackState.Capturing && qf >= maxCaptureFrameNumber)) {
+        if (qh >= data.Count || qh > playbackRangeTo) {
             playbackState = PlaybackState.Stopped;
             Time.timeScale = 0.0f;
 
@@ -153,9 +151,8 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     private void Init() {
         var playback = transform.GetComponentInParent<MotionPredictionPlayback>();
 
-        this.csvPath = playback.csvPath;
-        this.captureOutputPath = playback.captureOutputPath;
-        this.estimatedDelayTime = playback.estimatedDelayTime;
+        //this.csvPath = playback.csvPath;
+        //this.captureOutputPath = playback.captureOutputPath;
 
         playbackCameras[0] = transform.Find("LeftCam").GetComponent<Camera>();
         playbackCameras[1] = transform.Find("RightCam").GetComponent<Camera>();
@@ -214,8 +211,12 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         playbackMode = mode;
     }
 
-    public void SetMaxCaptureFrameNumber(int value) {
-        maxCaptureFrameNumber = value;
+    public void SetPlaybackRangeFrom(int value) {
+        playbackRangeFrom = value;
+    }
+
+    public void SetPlaybackRangeTo(int value) {
+        playbackRangeTo = value;
     }
 
     public void TogglePlay() {
@@ -224,7 +225,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         if (playbackState == PlaybackState.Stopped) {
             playbackState = PlaybackState.Playing;
 
-            qf = qh = 0;
+            qh = playbackRangeFrom;
             Time.timeScale = 1.0f;
         }
         else {
@@ -245,7 +246,8 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
             captureManager.Configure(captureOutputPath, leftCaptureCamera.targetTexture);
 
-            qf = qh = 0;
+            captureNum = 0;
+            qh = playbackRangeFrom;
             Time.timeScale = 1.0f;
         }
         else {
