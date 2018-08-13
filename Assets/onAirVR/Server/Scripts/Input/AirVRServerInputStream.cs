@@ -30,7 +30,7 @@ public class AirVRServerInputStream : AirVRInputStream {
     private static extern bool onairvr_GetInputTouch(int playerID, byte deviceID, byte controlID, ref float posX, ref float posY, ref float touch);
 
     [DllImport(AirVRServerPlugin.Name)]
-    private static extern bool onairvr_GetInputTransformWithTimeStamp(int playerID, byte deviceID, byte controlID, ref double timeStamp,
+    private static extern bool onairvr_GetInputTransformWithTimeStamp(int playerID, byte deviceID, byte controlID, ref long timeStamp,
                                                                       ref float posX, ref float posY, ref float posZ, 
                                                                       ref float rotX, ref float rotY, ref float rotZ, ref float retW);
 
@@ -109,7 +109,7 @@ public class AirVRServerInputStream : AirVRInputStream {
         return false;
     }
 
-    public bool GetTransform(string deviceName, byte controlID, ref double timeStamp, ref Vector3 position, ref Quaternion orientation) {
+    public bool GetTransform(string deviceName, byte controlID, ref long timeStamp, ref Vector3 position, ref Quaternion orientation) {
         if (receivers.ContainsKey(deviceName)) {
             return (receivers[deviceName] as AirVRInputDevice).GetTransform(controlID, ref timeStamp, ref position, ref orientation);
         }
@@ -269,7 +269,7 @@ public class AirVRServerInputStream : AirVRInputStream {
         return onairvr_GetInputTouch(owner.playerID, deviceID, controlID, ref position.x, ref position.y, ref touch);
     }
 
-    protected override bool GetInputTransformImpl(byte deviceID, byte controlID, ref double timeStamp, ref Vector3 position, ref Quaternion orientation) {
+    protected override bool GetInputTransformImpl(byte deviceID, byte controlID, ref long timeStamp, ref Vector3 position, ref Quaternion orientation) {
         Assert.IsNotNull(owner);
         return onairvr_GetInputTransformWithTimeStamp(owner.playerID, deviceID, controlID, ref timeStamp, ref position.x, ref position.y, ref position.z, ref orientation.x, ref orientation.y, ref orientation.z, ref orientation.w);
     }

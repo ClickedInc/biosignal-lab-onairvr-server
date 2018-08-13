@@ -226,8 +226,21 @@ public class AirVRServer : MonoBehaviour {
         void AirVRServerClientDisconnected(int clientHandle);
     }
 
+    public interface ProfilerEventHandler {
+        void AirVRProfilerEnabled(int clientHandle, string reportEndpoint);
+        void AirVRProfileDataReceived(int clientHandle, string json);
+        void AirVRProfileDataReceived(int clientHandle, byte[] cbor);
+        void AirVRProfilerDisabled(int clientHandle);
+    }
+
     private static AirVRServer _instance;
     private static EventHandler _Delegate;
+
+    public static bool isInstantiated {
+        get {
+            return _instance != null; 
+        }
+    }
 
     internal static AirVRServerParams serverParams {
         get {
@@ -267,11 +280,37 @@ public class AirVRServer : MonoBehaviour {
         }
     }
 
+    internal static void NotifyProfilerEnabled(int clientHandle, string reportEndpoint) {
+        if (profilerEventHandler != null) {
+            profilerEventHandler.AirVRProfilerEnabled(clientHandle, reportEndpoint);
+        }
+    }
+
+    internal static void NotifyProfileDataReceived(int clientHandle, string json) {
+        if (profilerEventHandler != null) {
+            profilerEventHandler.AirVRProfileDataReceived(clientHandle, json);
+        }
+    }
+
+    internal static void NotifyProfileDataReceived(int clientHandle, byte[] cbor) {
+        if (profilerEventHandler != null) {
+            profilerEventHandler.AirVRProfileDataReceived(clientHandle, cbor);
+        }
+    }
+
+    internal static void NotifyProfilerDisabled(int clientHandle) {
+        if (profilerEventHandler != null) {
+            profilerEventHandler.AirVRProfilerDisabled(clientHandle);
+        }
+    }
+
     public static EventHandler Delegate {
         set {
             _Delegate = value;
         }
     }
+
+    public static ProfilerEventHandler profilerEventHandler { private get; set; }
 
     public static void SendAudioFrame(AirVRCameraRig cameraRig, float[] data, int sampleCount, int channels, double timestamp) {
         if (cameraRig.isBoundToClient) {

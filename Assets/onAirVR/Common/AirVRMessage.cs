@@ -28,4 +28,8 @@ public class AirVRMessage {
             Data_Decoded = System.Convert.FromBase64String(Data);
         }
     }
+
+    public string GetDataRawString() {
+        return Data;
+    }
 }
