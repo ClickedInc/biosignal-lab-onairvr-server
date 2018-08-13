@@ -28,6 +28,9 @@ public class AirVRServerMessage : AirVRMessage {
     public const string NameDeactivated = "Deactivated";
     public const string NameDestroyed = "Destroyed";
     public const string NameShowCopyright = "ShowCopyright";
+    public const string NameProfilerEnabled = "ProfilerEnabled";
+    public const string NameProfile = "Profile";
+    public const string NameProfileCBOR = "ProfileCBOR";
 
     // Type : Event, From : MediaStream
     public const string NameInitialized = "Initialized";
@@ -52,6 +55,9 @@ public class AirVRServerMessage : AirVRMessage {
     // Type : Event
     public string From;
     public string Name;
+
+    // Type : Event, from : Player, Name : ProfileEnabled
+    public string ProfileReportEndpoint;
 
     // Type : Event, From : InputStream, Name : RemoteInputDeviceRegistered / RemoteInputDeviceUnregistered
     public int DeviceID;

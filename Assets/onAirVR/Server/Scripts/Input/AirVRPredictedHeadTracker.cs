@@ -12,13 +12,6 @@ using NetMQ.Sockets;
 using System;
 
 public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
-    public interface EventHandler
-    {
-        void OnReceivedPredictionServerData(double timeStamp, Quaternion predictedOrientation,float predictionTime, Quaternion originalOrientation);
-    }
-
-    public static EventHandler eventHandler;
-
     [Serializable]
     private class Arguments {
         public string PredictedMotionOutputEndpoint;
@@ -26,12 +19,11 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
     private NetMQ.Msg _msgRecv;
     private PullSocket _zmqPredictedMotion;
-    private double _lastTimeStamp;
+    private long _lastTimeStamp;
     private Quaternion _lastOrientation = Quaternion.identity;
     private Vector3 _lastCenterEyePosition = Vector3.zero;
 
     private float _predictionTime;
-    private Quaternion _originalOrientation = Quaternion.identity;
 
     // implements AirVRInputDevice
     protected override string deviceName {
@@ -67,26 +59,18 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
             if (BitConverter.IsLittleEndian) {
                 Array.Reverse(_msgRecv.Data, 0, 8);
-                for (int i = 0; i < 9; i++) {
+                for (int i = 0; i < 5; i++) {
                     Array.Reverse(_msgRecv.Data, 8 + i * 4, 4);
                 }
             }
 
-            _lastTimeStamp = BitConverter.ToDouble(_msgRecv.Data, 0);
-            _lastOrientation = new Quaternion(BitConverter.ToSingle(_msgRecv.Data, 8),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4),
+            _lastTimeStamp = BitConverter.ToInt64(_msgRecv.Data, 0);
+            _predictionTime = BitConverter.ToSingle(_msgRecv.Data, 8);
+            _lastOrientation = new Quaternion(BitConverter.ToSingle(_msgRecv.Data, 8 + 4),
                                               BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 2),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 3));
-
-            _predictionTime = BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 4);
-            _originalOrientation = new Quaternion(BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 5),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 6),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 7),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 8));
+                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 3),
+                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 4));
         }
-
-        if (eventHandler != null)
-            eventHandler.OnReceivedPredictionServerData(_lastTimeStamp, _lastOrientation, _predictionTime, _originalOrientation);
 
         OverrideControlTransform((byte)AirVRHeadTrackerKey.Transform, _lastTimeStamp, _lastOrientation * _lastCenterEyePosition, _lastOrientation);
     }

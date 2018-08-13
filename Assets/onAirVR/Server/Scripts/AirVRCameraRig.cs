@@ -15,10 +15,37 @@ using System.Runtime.InteropServices;
 
 [ExecuteInEditMode]
 public abstract class AirVRCameraRig : MonoBehaviour {
+    private class AirVRCameraEventEmitter : MonoBehaviour {
+        private int _playerID = InvalidPlayerID;
+        private int _viewNumber;
+
+        public bool bound {
+            get { return _playerID != InvalidPlayerID; }
+        }
+
+        public void Bind(int playerID) {
+            _playerID = playerID;
+        }
+
+        public void Unbind() {
+            _playerID = InvalidPlayerID;
+        }
+
+        public void UpdatePerFrame(int viewNumber) {
+            _viewNumber = viewNumber;
+        }
+
+        public void OnPreRender() {
+            if (bound) {
+                GL.IssuePluginEvent(onairvr_GameFrameRenderingStarted_RenderThread_Func(), AirVRServerPlugin.RenderEventArg((uint)_playerID, (uint)_viewNumber));
+            }
+        }
+    }
+
     private const int InvalidPlayerID = -1;
 
     [DllImport(AirVRServerPlugin.Name)]
-    private static extern void onairvr_GetViewNumber(int playerID, double timeStamp, float orientationX, float orientationY, float orientationZ, float orientationW, out int viewNumber);
+    private static extern void onairvr_GetViewNumber(int playerID, long timeStamp, float orientationX, float orientationY, float orientationZ, float orientationW, out int viewNumber);
 
     [DllImport(AirVRServerPlugin.Name)]
     private static extern IntPtr onairvr_InitStreams_RenderThread_Func();
@@ -50,12 +77,16 @@ public abstract class AirVRCameraRig : MonoBehaviour {
     [DllImport(AirVRServerPlugin.Name)]
     private static extern void onairvr_Disconnect(int playerID);
 
+    [DllImport(AirVRServerPlugin.Name)]
+    private static extern IntPtr onairvr_GameFrameRenderingStarted_RenderThread_Func();
+
     private Vector3 _cameraPosition = Vector3.zero;
     private Quaternion _cameraOrientation = Quaternion.identity;
     private AirVRClientConfig _config;
     private bool _mediaStreamJustStopped;
     private int _viewNumber;
     private bool _encodeVideoFrameRequested;
+    private AirVRCameraEventEmitter _cameraEventEmitter;
 
     private void enableCameras() {
         foreach (Camera cam in cameras) {
@@ -99,6 +130,8 @@ public abstract class AirVRCameraRig : MonoBehaviour {
             return;
         }
 
+        Debug.Log("AirVRCameraRig enabled");
+
         AirVRServer.LoadOnce(FindObjectOfType<AirVRServerInitParams>());
 
         disableCameras();
@@ -109,6 +142,9 @@ public abstract class AirVRCameraRig : MonoBehaviour {
 
         inputStream = new AirVRServerInputStream();
         inputStream.owner = this;
+
+        Debug.Assert(cameras != null && cameras.Length > 0);
+        _cameraEventEmitter = cameras[0].gameObject.AddComponent<AirVRCameraEventEmitter>();
     }
 
     private void Start() {
@@ -136,13 +172,15 @@ public abstract class AirVRCameraRig : MonoBehaviour {
         if (mediaStream != null && _mediaStreamJustStopped == false && _encodeVideoFrameRequested) {
             Assert.IsTrue(isBoundToClient);
 
-            double timeStamp = 0.0;
+            long timeStamp = 0;
             inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerKey.Transform, ref timeStamp, ref _cameraPosition, ref _cameraOrientation);
 
             onairvr_GetViewNumber(playerID, timeStamp, _cameraOrientation.x, _cameraOrientation.y, _cameraOrientation.z, _cameraOrientation.w, out _viewNumber);
             updateCameraTransforms(_config, _cameraPosition, _cameraOrientation);
 
             mediaStream.GetNextFramebufferTexturesAsRenderTargets(cameras);
+
+            _cameraEventEmitter.UpdatePerFrame(_viewNumber);
         }
         inputStream.UpdateSenders();
     }
@@ -314,6 +352,7 @@ public abstract class AirVRCameraRig : MonoBehaviour {
 
         this.playerID = playerID;
         _config = AirVRServerPlugin.GetConfig(playerID);
+        _cameraEventEmitter.Bind(playerID);
 
         Assert.IsNotNull(_config);
     }
@@ -336,6 +375,8 @@ public abstract class AirVRCameraRig : MonoBehaviour {
 
         playerID = InvalidPlayerID;
         _config = null;
+
+        _cameraEventEmitter.Unbind();
     }
 
     internal void PreHandOverStreams() {

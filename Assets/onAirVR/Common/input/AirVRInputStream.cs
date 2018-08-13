@@ -84,7 +84,7 @@ public abstract class AirVRInputStream {
     protected abstract void PendInputFloatImpl(byte deviceID, byte controlID, float value, byte policy);
 
     protected abstract bool GetInputTouchImpl(byte deviceID, byte controlID, ref Vector2 position, ref float touch);
-    protected abstract bool GetInputTransformImpl(byte deviceID, byte controlID, ref double timeStamp, ref Vector3 position, ref Quaternion orientation);
+    protected abstract bool GetInputTransformImpl(byte deviceID, byte controlID, ref long timeStamp, ref Vector3 position, ref Quaternion orientation);
     protected abstract bool GetTrackedDeviceFeedbackImpl(byte deviceID, byte controlID, 
                                                          ref Vector3 worldRayOrigin, ref Vector3 worldHitPosition, ref Vector3 worldHitNormal);
     protected abstract bool GetInputFloat4Impl(byte deviceID, byte controlID, ref Vector4 value);
@@ -252,16 +252,16 @@ public abstract class AirVRInputStream {
         PendInputTransformImpl((byte)sender.deviceID, controlID, position, orientation, (byte)SendingPolicy.Always);
     }
 
-    public void GetTransform(AirVRInputReceiver receiver, byte controlID, out double timeStamp, out Vector3 position, out Quaternion orientation) {
+    public void GetTransform(AirVRInputReceiver receiver, byte controlID, out long timeStamp, out Vector3 position, out Quaternion orientation) {
         Vector3 pos = Vector3.zero;
         Quaternion rot = Quaternion.identity;
-        double ts = 0.0;
+        long ts = 0;
 
         if (receiver.isRegistered) {
             if (GetInputTransformImpl((byte)receiver.deviceID, controlID, ref ts, ref pos, ref rot) == false) {
                 pos = Vector3.zero;
                 rot = Quaternion.identity;
-                ts = 0.0;
+                ts = 0;
             }
         }
 

@@ -104,11 +104,11 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
     }
 
     private class Xform : Control {
-        private double _timeStamp;
+        private long _timeStamp;
         private Vector3 _position;
         private Quaternion _orientation;
 
-        public double timeStamp {
+        public long timeStamp {
             get {
                 return _timeStamp;
             }
@@ -226,7 +226,7 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
         _extControls.Add(controlID, new Button());
     }
 
-    protected void OverrideControlTransform(byte controlID, double timeStamp, Vector3 position, Quaternion orientation) {
+    protected void OverrideControlTransform(byte controlID, long timeStamp, Vector3 position, Quaternion orientation) {
         Assert.IsTrue(_controls.ContainsKey(controlID));
         _controls[controlID].AsTransform().timeStamp = timeStamp;
         _controls[controlID].AsTransform().position = position;
@@ -273,7 +273,7 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
         return false;
     }
 
-    public bool GetTransform(byte controlID, ref double timeStamp, ref Vector3 position, ref Quaternion orientation) {
+    public bool GetTransform(byte controlID, ref long timeStamp, ref Vector3 position, ref Quaternion orientation) {
         Control control = findControl(controlID);
         if (control != null) {
             position = control.AsTransform().position;

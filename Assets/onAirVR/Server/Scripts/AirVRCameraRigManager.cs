@@ -89,6 +89,10 @@ public class AirVRCameraRigManager : MonoBehaviour {
     }
 
     private void updateApplicationTargetFrameRate() {
+        if (AirVRServer.isInstantiated == false) {
+            return;
+        }
+
         List<AirVRCameraRig> cameraRigs = new List<AirVRCameraRig>();
         _cameraRigList.GetAllRetainedCameraRigs(cameraRigs);
 
@@ -223,6 +227,15 @@ public class AirVRCameraRigManager : MonoBehaviour {
             else if (serverMessage.Name.Equals(AirVRServerMessage.NameShowCopyright)) {
                 onAirVRPlayerShowCopyright(playerID, serverMessage);
             }
+            else if (serverMessage.Name.Equals(AirVRServerMessage.NameProfilerEnabled)) {
+                onAirVRPlayerProfileEnabled(playerID, serverMessage);
+            }
+            else if (serverMessage.Name.Equals(AirVRServerMessage.NameProfile)) {
+                onAirVRPlayerProfile(playerID, serverMessage);
+            }
+            else if (serverMessage.Name.Equals(AirVRServerMessage.NameProfileCBOR)) {
+                onAirVRPlayerProfileCBOR(playerID, serverMessage);
+            }
         }
     }
 
@@ -281,7 +294,20 @@ public class AirVRCameraRigManager : MonoBehaviour {
         Debug.Log("(C) 2016-2018 onAirVR. All right reserved.");
     }
 
+    private void onAirVRPlayerProfileEnabled(int playerID, AirVRServerMessage message) {
+        AirVRServer.NotifyProfilerEnabled(playerID, message.ProfileReportEndpoint);
+    }
+
+    private void onAirVRPlayerProfile(int playerID, AirVRServerMessage message) {
+        AirVRServer.NotifyProfileDataReceived(playerID, System.Text.Encoding.Default.GetString(message.Data_Decoded));
+    }
+
+    private void onAirVRPlayerProfileCBOR(int playerID, AirVRServerMessage message) {
+        AirVRServer.NotifyProfileDataReceived(playerID, message.Data_Decoded);
+    }
+
     private void onAirVRSessionDisconnected(int playerID, AirVRServerMessage message) {
+        AirVRServer.NotifyProfilerDisabled(playerID);
         AirVRServer.NotifyClientDisconnected(playerID);
     }
 }
