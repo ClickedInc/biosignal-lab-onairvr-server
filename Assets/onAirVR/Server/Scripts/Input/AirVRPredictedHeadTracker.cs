@@ -66,8 +66,10 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
             _lastTimeStamp = BitConverter.ToInt64(_msgRecv.Data, 0);
             _predictionTime = BitConverter.ToSingle(_msgRecv.Data, 8);
-            _lastOrientation = new Quaternion(BitConverter.ToSingle(_msgRecv.Data, 8 + 4),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 2),
+
+            // convert coordinate from OpenGL to Unity
+            _lastOrientation = new Quaternion(-BitConverter.ToSingle(_msgRecv.Data, 8 + 4),
+                                              -BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 2),
                                               BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 3),
                                               BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 4));
         }
