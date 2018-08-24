@@ -8,7 +8,7 @@ using UnityEditor;
 public class MotionPredictionPlaybackCamera : MonoBehaviour {
     private int playbackRangeFrom = 0;
     private int playbackRangeTo = int.MaxValue;
-    private int qh;
+    private int qf;
     private int captureNum;
     private string csvPath;
     private string captureOutputPath;
@@ -77,9 +77,9 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Quaternion rotationQF = Quaternion.identity;
         Quaternion rotationQH = Quaternion.identity;
 
-        int qf = qh - LatencyFrameCirculate((double)data[num]["prediction_time"], 120);  // assume input motion data rate is 120 fps
-        if (qf < 0) {
-            qf = 0;
+        int qh = qf + LatencyFrameCirculate((double)data[qf]["prediction_time"], 120);  // assume input motion data rate is 120 fps
+        if (qh >= data.Count) {
+            qh = data.Count - 1;
         }
 
         if (parseRotateDataSetting(usePredict, qf, ref rotationQF) == false ||
@@ -88,8 +88,8 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
 
         transform.rotation = rotationQF;
-        leftPreviewCamera.transform.localRotation = rightPreviewCamera.transform.localRotation = rotationQH;
-        leftTargetTextureAnchor.localRotation = rightTargetTextureAnchor.localRotation = useTimeWarp ? rotationQF : rotationQH;
+        leftPreviewCamera.transform.localRotation = rightPreviewCamera.transform.localRotation = useTimeWarp ? rotationQH : rotationQF;
+        leftTargetTextureAnchor.localRotation = rightTargetTextureAnchor.localRotation = rotationQF;
 
         if (capture) {
             foreach (var cam in playbackCameras) {
@@ -99,7 +99,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             leftCaptureCamera.Render();
             rightCaptureCamera.Render();
 
-            if (qh <= playbackRangeTo) {
+            if (qf <= playbackRangeTo) {
                 captureManager.CaptureScreenshot((double)data[qf]["timestamp"], playbackModeDescription(mode), num);
             }
         }
@@ -122,9 +122,9 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
 
         captureNum++;
-        qh++;
+        qf++;
 
-        if (qh >= data.Count || qh > playbackRangeTo) {
+        if (qf >= data.Count || qf > playbackRangeTo) {
             playbackState = PlaybackState.Stopped;
             Time.timeScale = 0.0f;
 
@@ -225,7 +225,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         if (playbackState == PlaybackState.Stopped) {
             playbackState = PlaybackState.Playing;
 
-            qh = playbackRangeFrom;
+            qf = playbackRangeFrom;
             Time.timeScale = 1.0f;
         }
         else {
@@ -247,7 +247,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             captureManager.Configure(captureOutputPath, leftCaptureCamera.targetTexture);
 
             captureNum = 0;
-            qh = playbackRangeFrom;
+            qf = playbackRangeFrom;
             Time.timeScale = 1.0f;
         }
         else {
