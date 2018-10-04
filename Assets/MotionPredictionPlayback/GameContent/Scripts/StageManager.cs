@@ -6,15 +6,21 @@ using UnityEngine.UI;
 
 public class StageManager : MonoBehaviour {
 
-    [SerializeField] private ObjectPooler objectPooler;
-    [SerializeField] private UnityEvent stageStartEvents;
-    [SerializeField] private UnityEvent stageClearEvents;
+    [SerializeField] private ObjectPooler targetPooler;
+
     [SerializeField] private GameObject appleSpawnPos;
     [SerializeField] private Text stageText;
 
-    public GameObject target;
+    [SerializeField] private UnityEvent stageStartEvents;
+    [SerializeField] private UnityEvent stageClearEvents;
 
-    private List<GameObject> currentStageTargets = new List<GameObject>();
+    [SerializeField] private GameObject target;
+    [SerializeField] private GameObject dropableApple;
+
+    [SerializeField] private Transform[] poolingPoses;
+
+    //private List<GameObject> currentStageTargets = new List<GameObject>();
+    private int remainTargetNum;
     private int stage;
     private bool isClear;
 
@@ -22,27 +28,22 @@ public class StageManager : MonoBehaviour {
 	void Awake () {
         isClear = true;
         
-        objectPooler.Pool(target, 20);
-        StartStage();
+        targetPooler.MunaulPositionPool(target,27,poolingPoses);
+        
     }
 
     private void Update()
     {
-        if (currentStageTargets.Count == 0 && !isClear)
+        Debug.Log(remainTargetNum);
+        if (remainTargetNum <= 0 && !isClear)
         {
             StartCoroutine(ClearStage(2f));
         }
     }
 
-    public void DestroyTarget(GameObject gameObject)
+    public void StageTargetRemove(GameObject gameObject)
     {
-        currentStageTargets.Remove(gameObject);
-    }
-
-    public GameObject dropableApple;
-    public void SpawnDropableApple()
-    {
-        Instantiate(dropableApple, appleSpawnPos.transform.position, Quaternion.identity);
+        remainTargetNum--;     
     }
 
     public void StartStage()
@@ -50,12 +51,12 @@ public class StageManager : MonoBehaviour {
         stage++;
         isClear = false;
 
-        for (int i = 0; i < Random.Range(stage, stage + 2); i++)
+        for (int i = 0; i < Random.Range(stage, stage +1); i++)
         {
-            GameObject currentObject = objectPooler.GetPool();
-            currentObject.transform.position = new Vector3(Random.Range(-3, 3), Random.Range(2, 3), Random.Range(-3, 3));
+            GameObject currentObject = targetPooler.GetPool();
+            //currentObject.transform.position = new Vector3(Random.Range(-4.0f, 4.0f), Random.Range(1.0f, 1.5f), Random.Range(1.0f, 4.0f));
 
-            currentStageTargets.Add(currentObject);
+            remainTargetNum++;
         }
     }
 

@@ -2,18 +2,26 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Game : MonoBehaviour {
+public class Barrel : MonoBehaviour {
 
     [SerializeField] private StageManager stageManager;
 
 	// Use this for initialization
 	void Start () {
-
-        stageManager.StartStage();
-    }
+		
+	}
 	
 	// Update is called once per frame
 	void Update () {
+		
+	}
 
+    public void Put(GameObject gameObject)
+    {
+        if (gameObject.tag == "Apple")
+        {
+            Debug.Log("!!");
+            stageManager.StageTargetRemove(gameObject);
+        }
     }
 }
