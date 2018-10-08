@@ -144,7 +144,6 @@ public class CaptureManager : MonoBehaviour {
 
     public void PlayButtonClicked() {
         _playbackCamera.TogglePlay();
-        
     }
 
     public void CaptureButtonClicked() {

@@ -21,7 +21,7 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
     private PullSocket _zmqPredictedMotion;
     private long _lastTimeStamp;
     private Quaternion _lastOrientation = Quaternion.identity;
-    private Vector3 _lastCenterEyePosition = Vector3.zero;
+    private Vector3 _centerEyePosition = new Vector3(0.0f, 0.097f, 0.0805f);
 
     private float _predictionTime;
 
@@ -39,16 +39,6 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
     protected override void UpdateExtendedControls() {
         if (isRegistered == false) {
             return;
-        }
-
-        if (_lastCenterEyePosition == Vector3.zero) {
-            Vector3 position = Vector3.zero;
-            Quaternion orientation = Quaternion.identity;
-            GetTransform((byte)AirVRHeadTrackerKey.Transform, ref position, ref orientation);
-
-            if (position != Vector3.zero) {
-                _lastCenterEyePosition = position;
-            }
         }
 
         Debug.Assert(_zmqPredictedMotion != null);
@@ -74,7 +64,7 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
                                               BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 4));
         }
 
-        OverrideControlTransform((byte)AirVRHeadTrackerKey.Transform, _lastTimeStamp, _lastOrientation * _lastCenterEyePosition, _lastOrientation);
+        OverrideControlTransform((byte)AirVRHeadTrackerKey.Transform, _lastTimeStamp, _lastOrientation * _centerEyePosition, _lastOrientation);
     }
 
     public override void OnRegistered(byte inDeviceID, string arguments) {
@@ -100,7 +90,5 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
         _zmqPredictedMotion.Dispose();
         _zmqPredictedMotion = null;
-
-        _lastCenterEyePosition = Vector3.zero;
     }
 }

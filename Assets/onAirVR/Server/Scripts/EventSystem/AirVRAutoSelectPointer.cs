@@ -11,6 +11,10 @@ public class AirVRAutoSelectPointer : AirVRPointer {
     private AirVRInput.Device _currentDevice = AirVRInput.Device.HeadTracker;
 
     protected override void Update() {
+        if (cameraRig.gameObject.activeSelf == false) {
+            return;
+        }
+
         AirVRInput.Device dev = AirVRInput.IsDeviceAvailable(cameraRig, AirVRInput.Device.TrackedController) ? AirVRInput.Device.TrackedController : AirVRInput.Device.HeadTracker;
         if (dev != _currentDevice) {
             if (AirVRInput.IsDeviceFeedbackEnabled(cameraRig, _currentDevice)) {

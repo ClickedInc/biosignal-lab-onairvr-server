@@ -77,7 +77,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Quaternion rotationQF = Quaternion.identity;
         Quaternion rotationQH = Quaternion.identity;
 
-        int qh = qf + LatencyFrameCirculate((double)data[qf]["prediction_time"], 120);  // assume input motion data rate is 120 fps
+        int qh = qf + LatencyFrameCirculate((double)data[qf]["prediction_time"], (int)motionDataFps);  
         if (qh >= data.Count) {
             qh = data.Count - 1;
         }
@@ -116,8 +116,14 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             Simulate(captureNum, playbackMode, false);
         }
         else if (playbackState == PlaybackState.Capturing) {
-            for (uint mode = 0; mode < (uint)PlaybackMode.Max; mode++) {
-                Simulate(captureNum, (PlaybackMode)mode, true);
+            Simulate(captureNum, playbackMode, true);
+
+            //for (uint mode = 0; mode < (uint)PlaybackMode.Max; mode++) {
+            //    Simulate(captureNum, (PlaybackMode)mode, true);
+            //}
+
+            if (PlaybackCaptured != null) {
+                PlaybackCaptured(this, captureNum);
             }
         }
 
@@ -182,10 +188,14 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Time.timeScale = 0.0f;
     }
 
+    public float motionDataFps { get { return 120.0f; } } // assume input motion data rate is 120 fps
 
     // handle playback & capture control from capture manager
     public delegate void PlaybackStateChangeHandler(MotionPredictionPlaybackCamera sender, PlaybackState state);
     public event PlaybackStateChangeHandler PlaybackStateChanged;
+
+    public delegate void PlaybackCaptureHandler(MotionPredictionPlaybackCamera sender, int frame);
+    public event PlaybackCaptureHandler PlaybackCaptured;
 
     public void SetInputMotionDataFile(string path) {
         csvPath = path;

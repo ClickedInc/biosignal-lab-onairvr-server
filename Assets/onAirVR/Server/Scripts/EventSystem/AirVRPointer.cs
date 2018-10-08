@@ -49,7 +49,7 @@ public abstract class AirVRPointer : MonoBehaviour {
     }
 
     private void OnDisable() {
-        if (AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, device)) {
+        if (interactable) {
             AirVRInput.DisableDeviceFeedback(_cameraRig, device);
         }
     }
@@ -74,7 +74,7 @@ public abstract class AirVRPointer : MonoBehaviour {
 
     public bool interactable {
         get {
-            return AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, device);
+            return _cameraRig != null && _cameraRig.gameObject.activeSelf && AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, device);
         }
     }
 

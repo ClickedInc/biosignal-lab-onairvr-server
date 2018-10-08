@@ -16,6 +16,10 @@ public class InputManager : MonoBehaviour
 
     private void Update ()
     {
+        if (rig == null || rig.gameObject.activeSelf == false) {
+            return;
+        }
+
         if(AirVRInput.GetDown(rig , AirVRInput.TrackedController.Button.Back) ||
             AirVRInput.GetDown(rig, AirVRInput.Touchpad.Button.Back))
         {

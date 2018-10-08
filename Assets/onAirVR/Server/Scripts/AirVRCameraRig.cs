@@ -130,8 +130,6 @@ public abstract class AirVRCameraRig : MonoBehaviour {
             return;
         }
 
-        Debug.Log("AirVRCameraRig enabled");
-
         AirVRServer.LoadOnce(FindObjectOfType<AirVRServerInitParams>());
 
         disableCameras();
