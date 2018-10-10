@@ -17,7 +17,7 @@ public class VideoPlayerForPlayback : MonoBehaviour {
     }
 
     public void OnPlayPreview(float motionDataFps) {
-        _videoPlayer.playbackSpeed = _videoPlayer.frameRate / motionDataFps;
+        _videoPlayer.playbackSpeed = 60.0f / motionDataFps;
 
         _videoPlayer.Play();
     }

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
-public class UIManager : MonoBehaviour {
+public class GameContentUIManager : MonoBehaviour {
 
     [SerializeField] private GameObject gameTipUI;
     [SerializeField] private GameObject gameStartUI;

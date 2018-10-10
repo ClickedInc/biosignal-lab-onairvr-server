@@ -188,7 +188,7 @@ public class AirVRGraphicRaycaster : GraphicRaycaster {
     // overrides GraphicRaycaster
     public override Camera eventCamera {
         get {
-            return _pointer.cameraRig.cameras[0];
+            return _pointer.cameraRig.cameras != null ? _pointer.cameraRig.cameras[0] : null;
         }
     }
 
