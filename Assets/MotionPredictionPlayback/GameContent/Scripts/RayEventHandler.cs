@@ -7,13 +7,8 @@ using System;
 public class RayEventHandler : MonoBehaviour {
 
     [Serializable]
-    public class MouseEvent : UnityEvent<GameObject>
-    {
+    public class MouseEvent : UnityEvent<GameObject> { }
 
-    }
-
-    [SerializeField] private ObjectPooler pooler;
-    [SerializeField] private string targetTag;
     [SerializeField] private MouseEvent mouseRayEvents;
 
     private Ray ray;
@@ -27,10 +22,7 @@ public class RayEventHandler : MonoBehaviour {
 
         if (Physics.Raycast(ray, out hit, Mathf.Infinity))
         {
-            if (hit.transform.tag == targetTag)
-            {
-                mouseRayEvents.Invoke(hit.transform.gameObject);
-            }
+            mouseRayEvents.Invoke(hit.transform.gameObject);
         }
     }
 }

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class StageManager : MonoBehaviour {
 
-    [SerializeField] private ObjectPooler targetPooler;
+    public static bool isClear;
 
     [SerializeField] private GameObject appleSpawnPos;
     [SerializeField] private Text stageText;
@@ -19,42 +19,75 @@ public class StageManager : MonoBehaviour {
 
     [SerializeField] private Transform[] poolingPoses;
 
-    //private List<GameObject> currentStageTargets = new List<GameObject>();
     private int remainTargetNum;
-    private int stage;
-    private bool isClear;
+    private float remainTime;
+    private ObjectPooler objectPooler;
 
-	// Use this for initialization
+    private int stage;
+    public int Stage
+    {
+        get
+        {
+            return stage;
+        }
+        set
+        {
+            stage = value;
+        }
+    }
+
 	void Awake () {
         isClear = true;
-        
-        targetPooler.MunaulPositionPool(target,27,poolingPoses);
-        
+        remainTime = 10;
+    }
+
+    void Start()
+    {
+        objectPooler = GameContentManager.Instance.TargetPooler;
+
+        objectPooler.Pool(target, 20);
     }
 
     private void Update()
     {
-        Debug.Log(remainTargetNum);
+        if (remainTime <= 0)
+        {
+            GameContentManager.Instance.GameOver();
+        }
+
         if (remainTargetNum <= 0 && !isClear)
         {
+            if (GameContentManager.isGameOver)
+                return;
+
             StartCoroutine(ClearStage(2f));
         }
     }
 
+    public void OnTimeChange(float time)
+    {
+        remainTime = time;
+    }
+
     public void StageTargetRemove(GameObject gameObject)
     {
-        remainTargetNum--;     
+        if (gameObject.tag == "Apple")
+            remainTargetNum--;     
     }
 
     public void StartStage()
     {
+        if (GameContentManager.isGameOver)
+            return;
+
         stage++;
         isClear = false;
+        remainTargetNum = 0;
 
         for (int i = 0; i < Random.Range(stage, stage +1); i++)
         {
-            GameObject currentObject = targetPooler.GetPool();
-            //currentObject.transform.position = new Vector3(Random.Range(-4.0f, 4.0f), Random.Range(1.0f, 1.5f), Random.Range(1.0f, 4.0f));
+            GameObject currentObject = objectPooler.GetPool();
+            currentObject.transform.position = poolingPoses[Random.Range(0, poolingPoses.Length - 1)].transform.position;
 
             remainTargetNum++;
         }

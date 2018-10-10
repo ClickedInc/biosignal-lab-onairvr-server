@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu]
-public class ObjectPooler : ScriptableObject {
+public class ObjectPooler : MonoBehaviour{
 
-    private List<GameObject> pool = new List<GameObject>();
+    public List<GameObject> pool = new List<GameObject>();
 
-    public void OnEnable()
+    public void Awake()
     {
-        pool.Clear();    
+        pool.Clear();
     }
 
     public void Pool(GameObject gameObject,int num)
@@ -19,21 +18,6 @@ public class ObjectPooler : ScriptableObject {
             GameObject tmp = Instantiate(gameObject);
             tmp.SetActive(false);
             pool.Add(tmp);
-        }
-    }
-
-    public void MunaulPositionPool(GameObject gameObject, int num,Transform[] transforms)
-    {
-        for (int i = 0; i < num; i++)
-        {
-            GameObject tmp = Instantiate(gameObject);
-            tmp.SetActive(false);
-            pool.Add(tmp);
-
-            if (transforms.Length < i)
-                return;
-
-            tmp.transform.position = transforms[i].position;
         }
     }
 
@@ -48,17 +32,14 @@ public class ObjectPooler : ScriptableObject {
             }
         }
 
-        Debug.Log("There is no useable pool");
         try
         {
             return pool[pool.Count - 1];
         }
         catch
         {
-            Debug.Log("Checking for whether or not pool is empty");
             return null;
         }
-
     }
 
     public void ReturnPool()

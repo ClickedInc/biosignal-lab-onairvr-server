@@ -3,21 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Player : MonoBehaviour {
-
-    [SerializeField] private ObjectPooler dropableApplePooler;
+   
     [SerializeField] private GameObject dropableApple;
     [SerializeField] private GameObject head;
 
     private bool isCatched;
     private GameObject currentDropedApple;
-    public ObjectPooler targetPooler;
+    private ObjectPooler dropableApplePooler;
+    private ObjectPooler targetPooler;
 
-    // Use this for initialization
-    void Awake () {
-        dropableApplePooler.Pool(dropableApple, 50);
+    private void Start()
+    {
+        dropableApplePooler = GameContentManager.Instance.ApplePooler;
+        targetPooler = GameContentManager.Instance.TargetPooler;
+
+        dropableApplePooler.Pool(dropableApple, 20);
     }
 
-    // Update is called once per frame
     void Update () {
         if (isCatched)
         {
@@ -28,7 +30,8 @@ public class Player : MonoBehaviour {
 
     public void CatchApple(GameObject catchedApple)
     {
-        targetPooler.ReturnPool(gameObject);
+        targetPooler.ReturnPool(catchedApple);
+        dropableApplePooler.ReturnPool(catchedApple);
 
         if (!currentDropedApple)
         {
