@@ -82,6 +82,7 @@ public abstract class AirVRCameraRig : MonoBehaviour {
 
     private Vector3 _cameraPosition = Vector3.zero;
     private Quaternion _cameraOrientation = Quaternion.identity;
+
     private AirVRClientConfig _config;
     private bool _mediaStreamJustStopped;
     private int _viewNumber;
@@ -171,7 +172,13 @@ public abstract class AirVRCameraRig : MonoBehaviour {
             Assert.IsTrue(isBoundToClient);
 
             long timeStamp = 0;
-            inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerKey.Transform, ref timeStamp, ref _cameraPosition, ref _cameraOrientation);
+            inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Transform, ref timeStamp, ref _cameraPosition, ref _cameraOrientation);
+
+            float fov = inputStream.GetAxis(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.FOV);
+            Vector4 overfilling = inputStream.GetAxis4D(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Overfilling);
+
+            // TODO
+            Debug.Log(string.Format("fov: {0}, overfilling: {1}, {2}, {3}, {4}", fov, overfilling.x, overfilling.y, overfilling.z, overfilling.w));
 
             onairvr_GetViewNumber(playerID, timeStamp, _cameraOrientation.x, _cameraOrientation.y, _cameraOrientation.z, _cameraOrientation.w, out _viewNumber);
             updateCameraTransforms(_config, _cameraPosition, _cameraOrientation);

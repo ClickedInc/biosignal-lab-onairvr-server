@@ -158,7 +158,9 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
         _trackingModelObject.StopTracking();
     }
 
-    protected override void updateCameraTransforms(AirVRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation) {
+    protected override void updateCameraTransforms(AirVRClientConfig config, 
+                                                   Vector3 centerEyePosition, 
+                                                   Quaternion centerEyeOrientation) {
         updateTrackingModel();
         _trackingModelObject.UpdateEyePose(config, centerEyePosition, centerEyeOrientation);
     }
