@@ -17,13 +17,20 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
         public string PredictedMotionOutputEndpoint;
     }
 
+    public enum ControlKey {
+        Transform = 0,
+        Projection
+    }
+
     private NetMQ.Msg _msgRecv;
     private PullSocket _zmqPredictedMotion;
-    private long _lastTimeStamp;
-    private Quaternion _lastOrientation = Quaternion.identity;
     private Vector3 _centerEyePosition = new Vector3(0.0f, 0.097f, 0.0805f);
 
+    private long _lastTimeStamp;
     private float _predictionTime;
+    private Quaternion _lastOrientation = Quaternion.identity;
+    private float _fov;
+    private Vector4 _projection = Vector4.zero;
 
     // implements AirVRInputDevice
     protected override string deviceName {
@@ -33,7 +40,9 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
     }
 
     protected override void MakeControlList() {
-        AddControlTransform((byte)AirVRHeadTrackerKey.Transform);
+        AddControlTransform((byte)ControlKey.Transform);
+
+        AddExtControlAxis4D((byte)ControlKey.Projection);
     }
 
     protected override void UpdateExtendedControls() {
@@ -49,22 +58,29 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
             if (BitConverter.IsLittleEndian) {
                 Array.Reverse(_msgRecv.Data, 0, 8);
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < 9; i++) {
                     Array.Reverse(_msgRecv.Data, 8 + i * 4, 4);
                 }
             }
 
-            _lastTimeStamp = BitConverter.ToInt64(_msgRecv.Data, 0);
-            _predictionTime = BitConverter.ToSingle(_msgRecv.Data, 8);
+            int pos = 0;
+            _lastTimeStamp = BitConverter.ToInt64(_msgRecv.Data, pos); pos += 8;
+            _predictionTime = BitConverter.ToSingle(_msgRecv.Data, pos); pos += 4;
 
             // convert coordinate from OpenGL to Unity
-            _lastOrientation = new Quaternion(-BitConverter.ToSingle(_msgRecv.Data, 8 + 4),
-                                              -BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 2),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 3),
-                                              BitConverter.ToSingle(_msgRecv.Data, 8 + 4 * 4));
+            _lastOrientation = new Quaternion(-BitConverter.ToSingle(_msgRecv.Data, pos),
+                                              -BitConverter.ToSingle(_msgRecv.Data, pos + 4),
+                                              BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2),
+                                              BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 3)); pos += 16;
+
+            _projection = new Vector4(BitConverter.ToSingle(_msgRecv.Data, pos),
+                                      BitConverter.ToSingle(_msgRecv.Data, pos + 4),
+                                      BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2),
+                                      BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 3));
         }
 
-        OverrideControlTransform((byte)AirVRHeadTrackerKey.Transform, _lastTimeStamp, _lastOrientation * _centerEyePosition, _lastOrientation);
+        OverrideControlTransform((byte)ControlKey.Transform, _lastTimeStamp, _lastOrientation * _centerEyePosition, _lastOrientation);
+        SetExtControlAxis4D((byte)ControlKey.Projection, _projection);
     }
 
     public override void OnRegistered(byte inDeviceID, string arguments) {

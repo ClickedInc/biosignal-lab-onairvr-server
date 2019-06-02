@@ -13,6 +13,10 @@ using UnityEngine.Assertions;
 
 public abstract class AirVRInputDevice : AirVRInputReceiver {
     private abstract class Control {
+        public Axis4D AsAxis4D() {
+            return this as Axis4D;
+        }
+
         public Axis3D AsAxis3D() {
             return this as Axis3D;
         }
@@ -42,6 +46,15 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
         }
 
         public abstract void PollInput(AirVRInputDevice device, AirVRInputStream inputStream, byte id);
+    }
+
+    private class Axis4D : Control {
+        public Vector4 value { get; set; }
+
+        public override void PollInput(AirVRInputDevice device, AirVRInputStream inputStream, byte id) {
+            var quat = inputStream.GetQuaternion(device, id);
+            value = new Vector4(quat.x, quat.y, quat.z, quat.w);
+        }
     }
 
     private class Axis3D : Control {
@@ -210,6 +223,10 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
         _controls.Add(controlID, new Button());
     }
 
+    protected void AddExtControlAxis4D(byte controlID) {
+        _extControls.Add(controlID, new Axis4D());
+    }
+
     protected void AddExtControlAxis3D(byte controlID) {
         _extControls.Add(controlID, new Axis3D());
     }
@@ -231,6 +248,11 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
         _controls[controlID].AsTransform().timeStamp = timeStamp;
         _controls[controlID].AsTransform().position = position;
         _controls[controlID].AsTransform().orientation = orientation;
+    }
+
+    protected void SetExtControlAxis4D(byte controlID, Vector4 value) {
+        Assert.IsTrue(_extControls.ContainsKey(controlID));
+        _extControls[controlID].AsAxis4D().value = value;
     }
 
     protected void SetExtControlAxis3D(byte controlID, Vector3 value) {
@@ -287,6 +309,11 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
     public Quaternion GetOrientation(byte controlID) {
         Control control = findControl(controlID);
         return control != null ? control.AsOrientation().value : Quaternion.identity;
+    }
+
+    public Vector4 GetAxis4D(byte controlID) {
+        Control control = findControl(controlID);
+        return control != null ? control.AsAxis4D().value : Vector4.zero;
     }
 
     public Vector3 GetAxis3D(byte controlID) {

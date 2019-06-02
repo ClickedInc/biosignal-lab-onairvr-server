@@ -123,6 +123,20 @@ public class AirVRServerInputStream : AirVRInputStream {
         return Quaternion.identity;
     }
 
+    public Vector4 GetAxis4D(string deviceName, byte controlID) {
+        if (receivers.ContainsKey(deviceName)) {
+            return (receivers[deviceName] as AirVRInputDevice).GetAxis4D(controlID);
+        }
+        return Vector4.zero;
+    }
+
+    public Vector3 GetAxis3D(string deviceName, byte controlID) {
+        if (receivers.ContainsKey(deviceName)) {
+            return (receivers[deviceName] as AirVRInputDevice).GetAxis3D(controlID);
+        }
+        return Vector3.zero;
+    }
+
     public Vector2 GetAxis2D(string deviceName, byte controlID) {
         if (receivers.ContainsKey(deviceName)) {
             return (receivers[deviceName] as AirVRInputDevice).GetAxis2D(controlID);
