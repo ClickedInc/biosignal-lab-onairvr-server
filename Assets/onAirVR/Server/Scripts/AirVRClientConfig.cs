@@ -30,7 +30,18 @@ public class AirVRClientConfig {
     [SerializeField] protected float InterpupillaryDistance;
     [SerializeField] protected Vector3 EyeCenterPosition;
 
-    private Matrix4x4 makeProjection(float l, float t, float r, float b, float n, float f) {
+    internal static Matrix4x4 MakeProjection(Rect projection, float near, float far) {
+        return MakeProjection(
+            projection.xMin * near,
+            projection.yMax * near,
+            projection.xMax * near,
+            projection.yMin * near,
+            near,
+            far
+        );
+    }
+
+    private static Matrix4x4 MakeProjection(float l, float t, float r, float b, float n, float f) {
         Matrix4x4 result = Matrix4x4.zero;
         result[0, 0] = 2 * n / (r - l);
         result[1, 1] = 2 * n / (t - b);
@@ -44,7 +55,7 @@ public class AirVRClientConfig {
     }
 
     internal Matrix4x4 GetLeftEyeCameraProjection(float near, float far) {
-        return makeProjection(LeftEyeCameraNearPlane[0] * near, LeftEyeCameraNearPlane[1] * near, LeftEyeCameraNearPlane[2] * near, LeftEyeCameraNearPlane[3] * near, near, far);
+        return MakeProjection(LeftEyeCameraNearPlane[0] * near, LeftEyeCameraNearPlane[1] * near, LeftEyeCameraNearPlane[2] * near, LeftEyeCameraNearPlane[3] * near, near, far);
     }
 
     internal Matrix4x4 GetRightEyeCameraProjection(float near, float far) {

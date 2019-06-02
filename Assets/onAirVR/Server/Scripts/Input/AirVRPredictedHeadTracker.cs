@@ -19,8 +19,7 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
     public enum ControlKey {
         Transform = 0,
-        FOV,
-        Overfilling
+        Projection
     }
 
     private NetMQ.Msg _msgRecv;
@@ -31,7 +30,7 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
     private float _predictionTime;
     private Quaternion _lastOrientation = Quaternion.identity;
     private float _fov;
-    private Vector4 _overfilling = Vector4.zero;
+    private Vector4 _projection = Vector4.zero;
 
     // implements AirVRInputDevice
     protected override string deviceName {
@@ -43,8 +42,7 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
     protected override void MakeControlList() {
         AddControlTransform((byte)ControlKey.Transform);
 
-        AddExtControlAxis((byte)ControlKey.FOV);
-        AddExtControlAxis4D((byte)ControlKey.Overfilling);
+        AddExtControlAxis4D((byte)ControlKey.Projection);
     }
 
     protected override void UpdateExtendedControls() {
@@ -60,7 +58,7 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
 
             if (BitConverter.IsLittleEndian) {
                 Array.Reverse(_msgRecv.Data, 0, 8);
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < 9; i++) {
                     Array.Reverse(_msgRecv.Data, 8 + i * 4, 4);
                 }
             }
@@ -75,16 +73,14 @@ public class AirVRPredictedHeadTrackerInputDevice : AirVRInputDevice {
                                               BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2),
                                               BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 3)); pos += 16;
 
-            _fov = BitConverter.ToSingle(_msgRecv.Data, pos); pos += 4;
-            _overfilling = new Vector4(BitConverter.ToSingle(_msgRecv.Data, pos),
-                                       BitConverter.ToSingle(_msgRecv.Data, pos + 4),
-                                       BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2),
-                                       BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 3));
+            _projection = new Vector4(BitConverter.ToSingle(_msgRecv.Data, pos),
+                                      BitConverter.ToSingle(_msgRecv.Data, pos + 4),
+                                      BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2),
+                                      BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 3));
         }
 
         OverrideControlTransform((byte)ControlKey.Transform, _lastTimeStamp, _lastOrientation * _centerEyePosition, _lastOrientation);
-        SetExtControlAxis((byte)ControlKey.FOV, _fov);
-        SetExtControlAxis4D((byte)ControlKey.Overfilling, _overfilling);
+        SetExtControlAxis4D((byte)ControlKey.Projection, _projection);
     }
 
     public override void OnRegistered(byte inDeviceID, string arguments) {

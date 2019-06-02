@@ -56,6 +56,10 @@ public sealed class AirVRMonoCameraRig : AirVRCameraRig {
         _cameraAnchor.localPosition = centerEyePosition;
     }
 
+    protected override void updateCameraMatrix(Rect projection) {
+        _cameras[0].projectionMatrix = AirVRClientConfig.MakeProjection(projection, _cameras[0].nearClipPlane, _cameras[0].farClipPlane);
+    }
+
     internal override Matrix4x4 clientSpaceToWorldMatrix {
         get {
             return _thisTransform.localToWorldMatrix;

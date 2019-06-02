@@ -45,7 +45,10 @@ public abstract class AirVRCameraRig : MonoBehaviour {
     private const int InvalidPlayerID = -1;
 
     [DllImport(AirVRServerPlugin.Name)]
-    private static extern void onairvr_GetViewNumber(int playerID, long timeStamp, float orientationX, float orientationY, float orientationZ, float orientationW, out int viewNumber);
+    private static extern void onairvr_GetViewNumber(int playerID, long timeStamp, 
+                                                     float orientationX, float orientationY, float orientationZ, float orientationW, 
+                                                     float projectionLeft, float projectionTop, float projectionRight, float projectionBottom,
+                                                     out int viewNumber);
 
     [DllImport(AirVRServerPlugin.Name)]
     private static extern IntPtr onairvr_InitStreams_RenderThread_Func();
@@ -174,14 +177,17 @@ public abstract class AirVRCameraRig : MonoBehaviour {
             long timeStamp = 0;
             inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Transform, ref timeStamp, ref _cameraPosition, ref _cameraOrientation);
 
-            float fov = inputStream.GetAxis(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.FOV);
-            Vector4 overfilling = inputStream.GetAxis4D(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Overfilling);
+            var projection = makeSafeCameraProjection(
+                inputStream.GetAxis4D(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Projection)
+            );
 
-            // TODO
-            Debug.Log(string.Format("fov: {0}, overfilling: {1}, {2}, {3}, {4}", fov, overfilling.x, overfilling.y, overfilling.z, overfilling.w));
+            onairvr_GetViewNumber(playerID, timeStamp, 
+                                  _cameraOrientation.x, _cameraOrientation.y, _cameraOrientation.z, _cameraOrientation.w,
+                                  projection.xMin, projection.yMax, projection.xMax, projection.yMin,
+                                  out _viewNumber);
 
-            onairvr_GetViewNumber(playerID, timeStamp, _cameraOrientation.x, _cameraOrientation.y, _cameraOrientation.z, _cameraOrientation.w, out _viewNumber);
             updateCameraTransforms(_config, _cameraPosition, _cameraOrientation);
+            updateCameraMatrix(projection);
 
             mediaStream.GetNextFramebufferTexturesAsRenderTargets(cameras);
 
@@ -199,6 +205,27 @@ public abstract class AirVRCameraRig : MonoBehaviour {
             AirVRCameraRigManager.managerOnCurrentScene.eventDispatcher.MessageReceived -= onAirVRMessageReceived;
             AirVRCameraRigManager.managerOnCurrentScene.UnregisterCameraRig(this);
         }
+    }
+
+    private Rect makeSafeCameraProjection(Vector4 projection) {
+        var clamped = new Vector4(
+            Math.Max(Math.Min(projection.x, -0.5f), -2.0f),
+            Math.Min(Math.Max(projection.y, 0.5f), 2.0f),
+            Math.Min(Math.Max(projection.z, 0.5f), 2.0f),
+            Math.Max(Math.Min(projection.w, -0.5f), -2.0f)
+        );
+
+        float aspect = (clamped.z - clamped.x) / (clamped.y - clamped.w);
+        if (aspect > 1) {
+            clamped.y *= aspect;
+            clamped.w *= aspect;
+        }
+        else {
+            clamped.z *= 1 / aspect;
+            clamped.x *= 1 / aspect;
+        }
+
+        return Rect.MinMaxRect(clamped.x, clamped.w, clamped.z, clamped.y);
     }
 
     private void onAirVRMessageReceived(AirVRMessage message) {
@@ -333,6 +360,7 @@ public abstract class AirVRCameraRig : MonoBehaviour {
     protected virtual void onStartRender() { }
     protected virtual void onStopRender() { }
     protected abstract void updateCameraTransforms(AirVRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation);
+    protected abstract void updateCameraMatrix(Rect projection);
 
     internal int playerID { get; private set; }
 

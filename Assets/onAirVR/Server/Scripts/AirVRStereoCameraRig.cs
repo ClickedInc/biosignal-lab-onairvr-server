@@ -165,6 +165,11 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
         _trackingModelObject.UpdateEyePose(config, centerEyePosition, centerEyeOrientation);
     }
 
+    protected override void updateCameraMatrix(Rect projection) {
+        leftEyeCamera.projectionMatrix = AirVRClientConfig.MakeProjection(projection, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
+        rightEyeCamera.projectionMatrix = AirVRClientConfig.MakeProjection(projection, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
+    }
+
     internal override Matrix4x4 clientSpaceToWorldMatrix {
         get {
             Assert.IsNotNull(_trackingModelObject);
