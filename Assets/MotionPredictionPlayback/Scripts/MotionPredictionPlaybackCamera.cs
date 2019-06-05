@@ -12,7 +12,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     private int captureNum;
     private string csvPath;
     private string captureOutputPath;
-    private List<Dictionary<string, object>> data;
+    //private List<Dictionary<string, object>> data;
     private Camera[] playbackCameras = new Camera[2];
     private CaptureManager captureManager;
     private Camera leftPreviewCamera;
@@ -179,7 +179,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
         captureModule.transform.position = Vector3.down * 1000.0f;
         leftPreviewCamera.aspect = rightPreviewCamera.aspect =
-            leftCaptureCamera.aspect = rightCaptureCamera.aspect = 1.0f;
+        leftCaptureCamera.aspect = rightCaptureCamera.aspect = 1.0f;
 
         // apply GearVR head model
         playbackCameras[0].transform.localPosition = new Vector3(-0.032f, 0.097f, 0.0805f);
