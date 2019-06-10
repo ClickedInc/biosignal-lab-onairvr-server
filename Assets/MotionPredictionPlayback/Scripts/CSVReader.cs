@@ -7,6 +7,11 @@ using System.Text.RegularExpressions;
 
 public class CSVReader
 {
+    public static int lineLength;
+
+    static string filePath;
+    static string[] lines;
+    static string[] header;
     static string SPLIT_RE = @",(?=(?:[^""]*""[^""]*"")*(?![^""]*""))";
     static string LINE_SPLIT_RE = @"\r\n|\n\r|\n|\r";
     static char[] TRIM_CHARS = { '\"' };
@@ -47,20 +52,30 @@ public class CSVReader
         return list;
     }
 
-    public static Dictionary<string, object> ReadLine(string path, int lineIndex)
+    public static void Init(string path)
     {
-        var list = new List<Dictionary<string, object>>();
+        var csvData = System.IO.File.ReadAllText(path);
 
-        string data = System.IO.File.ReadAllText(path);
-
-        if (data == null)
+        if (csvData == null)
             Debug.LogAssertion("Filepath is null");
 
-        var lines = Regex.Split(data, LINE_SPLIT_RE);
+        filePath = path;
 
-        var header = Regex.Split(lines[0], SPLIT_RE);
+        lines = Regex.Split(csvData, LINE_SPLIT_RE);
 
-        var values = Regex.Split(lines[lineIndex], SPLIT_RE);
+        lineLength = lines.Length;
+
+        header = Regex.Split(lines[0], SPLIT_RE);
+    }
+
+    public static Dictionary<string, object> ReadLine(int lineIndex)
+    {
+        if (lineLength <= lineIndex + 1)
+        {
+            return null;
+        }
+
+        var values = Regex.Split(lines[lineIndex + 1], SPLIT_RE);
 
         var entry = new Dictionary<string, object>();
         for (var j = 0; j < header.Length && j < values.Length; j++)
