@@ -7,6 +7,11 @@ using System.Text.RegularExpressions;
 
 public class CSVReader
 {
+    public static int lineLength;
+
+    static string filePath;
+    static string[] lines;
+    static string[] header;
     static string SPLIT_RE = @",(?=(?:[^""]*""[^""]*"")*(?![^""]*""))";
     static string LINE_SPLIT_RE = @"\r\n|\n\r|\n|\r";
     static char[] TRIM_CHARS = { '\"' };
@@ -26,7 +31,6 @@ public class CSVReader
         var header = Regex.Split(lines[0], SPLIT_RE);
         for (var i = 1; i < lines.Length; i++)
         {
-
             var values = Regex.Split(lines[i], SPLIT_RE);
             if (values.Length == 0 || values[0] == "") continue;
 
@@ -46,5 +50,47 @@ public class CSVReader
             list.Add(entry);
         }
         return list;
+    }
+
+    public static void Init(string path)
+    {
+        var csvData = System.IO.File.ReadAllText(path);
+
+        if (csvData == null)
+            Debug.LogAssertion("Filepath is null");
+
+        filePath = path;
+
+        lines = Regex.Split(csvData, LINE_SPLIT_RE);
+
+        lineLength = lines.Length;
+
+        header = Regex.Split(lines[0], SPLIT_RE);
+    }
+
+    public static Dictionary<string, object> ReadLine(int lineIndex)
+    {
+        if (lineLength <= lineIndex + 1)
+        {
+            return null;
+        }
+
+        var values = Regex.Split(lines[lineIndex + 1], SPLIT_RE);
+
+        var entry = new Dictionary<string, object>();
+        for (var j = 0; j < header.Length && j < values.Length; j++)
+        {
+            string value = values[j];
+            value = value.TrimStart(TRIM_CHARS).TrimEnd(TRIM_CHARS).Replace("\\", "");
+            object finalvalue = value;
+            double f;
+            if (double.TryParse(value, out f))
+            {
+                finalvalue = f;
+            }
+            entry[header[j]] = finalvalue;
+        }
+
+        return entry;
     }
 }
