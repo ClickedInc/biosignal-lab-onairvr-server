@@ -47,7 +47,8 @@ public abstract class AirVRCameraRig : MonoBehaviour {
     [DllImport(AirVRServerPlugin.Name)]
     private static extern void onairvr_GetViewNumber(int playerID, long timeStamp, 
                                                      float orientationX, float orientationY, float orientationZ, float orientationW, 
-                                                     float projectionLeft, float projectionTop, float projectionRight, float projectionBottom,
+                                                     float renderProjL, float renderProjT, float renderProjR, float renderProjB,
+                                                     float encodingProjL, float encodingProjT, float encodingProjR, float encodingProjB,
                                                      out int viewNumber);
 
     [DllImport(AirVRServerPlugin.Name)]
@@ -177,17 +178,30 @@ public abstract class AirVRCameraRig : MonoBehaviour {
             long timeStamp = 0;
             inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Transform, ref timeStamp, ref _cameraPosition, ref _cameraOrientation);
 
-            var projection = makeSafeCameraProjection(
-                inputStream.GetAxis4D(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Projection)
+            var projection = inputStream.GetAxis4D(AirVRInputDeviceName.HeadTracker, (byte)AirVRPredictedHeadTrackerInputDevice.ControlKey.Projection);
+            var center = new Vector2((projection.x + projection.z) / 2, (projection.y + projection.w) / 2);
+
+            var encodingPlane = _config.GetLeftEncodingNearPlane();
+            var encodingProjection = Rect.MinMaxRect(encodingPlane.x + center.x, 
+                                                     encodingPlane.w + center.y, 
+                                                     encodingPlane.z + center.x, 
+                                                     encodingPlane.y + center.y);
+
+            var renderProjection = makeSafeRenderProjection(
+                Rect.MinMaxRect(Mathf.Max(encodingProjection.xMin, projection.x),
+                                Mathf.Max(encodingProjection.yMin, projection.w),
+                                Mathf.Min(encodingProjection.xMax, projection.z),
+                                Mathf.Min(encodingProjection.yMax, projection.y))
             );
 
             onairvr_GetViewNumber(playerID, timeStamp, 
                                   _cameraOrientation.x, _cameraOrientation.y, _cameraOrientation.z, _cameraOrientation.w,
-                                  projection.xMin, projection.yMax, projection.xMax, projection.yMin,
+                                  renderProjection.xMin, renderProjection.yMax, renderProjection.xMax, renderProjection.yMin,
+                                  encodingProjection.xMin, encodingProjection.yMax, encodingProjection.xMax, encodingProjection.yMin,
                                   out _viewNumber);
 
             updateCameraTransforms(_config, _cameraPosition, _cameraOrientation);
-            updateCameraMatrix(projection);
+            updateCameraProjection(renderProjection, encodingProjection);
 
             mediaStream.GetNextFramebufferTexturesAsRenderTargets(cameras);
 
@@ -207,25 +221,16 @@ public abstract class AirVRCameraRig : MonoBehaviour {
         }
     }
 
-    private Rect makeSafeCameraProjection(Vector4 projection) {
-        var clamped = new Vector4(
-            Math.Max(Math.Min(projection.x, -0.5f), -2.0f),
-            Math.Min(Math.Max(projection.y, 0.5f), 2.0f),
-            Math.Min(Math.Max(projection.z, 0.5f), 2.0f),
-            Math.Max(Math.Min(projection.w, -0.5f), -2.0f)
-        );
+    private Rect makeSafeRenderProjection(Rect projection) {
+        if (projection.width >= 1.0f || projection.height >= 1.0f) { return projection; }
 
-        float aspect = (clamped.z - clamped.x) / (clamped.y - clamped.w);
-        if (aspect > 1) {
-            clamped.y *= aspect;
-            clamped.w *= aspect;
-        }
-        else {
-            clamped.z *= 1 / aspect;
-            clamped.x *= 1 / aspect;
-        }
+        var width = Mathf.Max(projection.width, 0.5f);
+        var height = Mathf.Max(projection.height, 0.5f);
 
-        return Rect.MinMaxRect(clamped.x, clamped.w, clamped.z, clamped.y);
+        return Rect.MinMaxRect(projection.center.x - width / 2,
+                               projection.center.y - height / 2,
+                               projection.center.x + width / 2,
+                               projection.center.y + height / 2);
     }
 
     private void onAirVRMessageReceived(AirVRMessage message) {
@@ -360,7 +365,7 @@ public abstract class AirVRCameraRig : MonoBehaviour {
     protected virtual void onStartRender() { }
     protected virtual void onStopRender() { }
     protected abstract void updateCameraTransforms(AirVRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation);
-    protected abstract void updateCameraMatrix(Rect projection);
+    protected abstract void updateCameraProjection(Rect renderProjection, Rect encodingProjection);
 
     internal int playerID { get; private set; }
 

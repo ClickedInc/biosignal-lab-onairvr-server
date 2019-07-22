@@ -17,12 +17,13 @@ public enum AirVRClientType {
 
 [Serializable]
 public class AirVRClientConfig {
-	public AirVRClientConfig() {
+    public AirVRClientConfig() {
         LeftEyeCameraNearPlane = new float[4];
     }
 
     [SerializeField] protected string UserID;
     [SerializeField] protected bool Stereoscopy;
+    [SerializeField] protected int EyeTextureSize;
     [SerializeField] protected int VideoWidth;
     [SerializeField] protected int VideoHeight;
     [SerializeField] protected float[] LeftEyeCameraNearPlane;
@@ -64,9 +65,26 @@ public class AirVRClientConfig {
         return result;
     }
 
+    internal Vector4 GetLeftEncodingNearPlane() {
+        var scale = videoWidth / 2.0f / eyeTextureSize;
+
+        return new Vector4(
+            LeftEyeCameraNearPlane[0] * scale,
+            LeftEyeCameraNearPlane[1] * scale,
+            LeftEyeCameraNearPlane[2] * scale,
+            LeftEyeCameraNearPlane[3] * scale
+        );
+    }
+
     public AirVRClientType type {
         get {
             return Stereoscopy ? AirVRClientType.Stereoscopic : AirVRClientType.Monoscopic;
+        }
+    }
+
+    public int eyeTextureSize {
+        get {
+            return EyeTextureSize;
         }
     }
 
@@ -84,7 +102,6 @@ public class AirVRClientConfig {
 
     public float framerate {
         get {
-
             return Mathf.Min(FrameRate, AirVRServer.serverParams.MaxFrameRate);
         }
     }
