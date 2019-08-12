@@ -118,7 +118,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
                 {
                     MotionDataFps = 120.0f;
                 }
-                if(timeStampCount < 700)
+                else
                 {
                     MotionDataFps = 60.0f;
                 }
