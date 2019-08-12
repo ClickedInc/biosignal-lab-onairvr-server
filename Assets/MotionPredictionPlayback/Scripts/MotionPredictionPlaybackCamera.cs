@@ -23,13 +23,14 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
     }
 
+    private const int RESOLUTION = 1920 / 1080;
+
     private int playbackRangeFrom = 0;
     private int playbackRangeTo = int.MaxValue;
     private int qf;
     private int captureNum;
     private string csvPath;
     private string captureOutputPath;
-    //private List<Dictionary<string, object>> data;
     private MatrixArray predictedMatrixArray = new MatrixArray();
     private MatrixArray inputMatrixArray = new MatrixArray();
     private Camera[] playbackCameras = new Camera[2];
@@ -51,10 +52,11 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     private PlaybackState playbackState = PlaybackState.Stopped;
 
     public enum PlaybackMode : uint {
-        NotPredict_NoTimeWarp = 0,
-        NotPredict_TimeWarp,
-        Predict_NoTimeWarp,
+
+        Predict_NoTimeWarp = 0,
         Predict_TimeWarp,
+        NotPredict_NoTimeWarp,
+        NotPredict_TimeWarp,
 
         Max
     }
@@ -91,6 +93,43 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         return "Unknown";
     }
 
+    private bool isMotionData;
+
+    private void CheckMatricData()
+    {
+        bool result = CSVReader.GetExistKey("prediction_time");
+
+        isMotionData = result;
+    }
+
+    private void CheckTimestampAndSetMotionDataFps()
+    {
+        int timeStampCount = 0;
+
+        double t1 = (double)CSVReader.ReadLine(0)["timestamp"] * 1 / 705600000;
+
+        while(true)
+        {
+            double t2 = (double)CSVReader.ReadLine(timeStampCount)["timestamp"] * 1 / 705600000;
+
+            if (t2 - t1 >= 10.0f)
+            {
+                if (timeStampCount >= 700)
+                {
+                    MotionDataFps = 120.0f;
+                }
+                if(timeStampCount < 700)
+                {
+                    MotionDataFps = 60.0f;
+                }
+
+                break;
+            }
+
+            timeStampCount++;
+        }
+    }
+
     private void Simulate(int num, PlaybackMode mode, bool capture) {
         bool usePredict = mode == PlaybackMode.Predict_NoTimeWarp || mode == PlaybackMode.Predict_TimeWarp;
         bool useTimeWarp = mode == PlaybackMode.NotPredict_TimeWarp || mode == PlaybackMode.Predict_TimeWarp;
@@ -98,8 +137,18 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Quaternion rotationQF = Quaternion.identity;
         Quaternion rotationQH = Quaternion.identity;
 
-        int qh = qf + LatencyFrameCirculate((double)CSVReader.ReadLine(qf)["prediction_time"], (int)motionDataFps);
-        if (qh >= CSVReader.lineLength) {
+        int qh = 0;
+
+        if (isMotionData)
+        {
+            qh = qf + LatencyFrameCirculate((double)CSVReader.ReadLine(qf)["prediction_time"], (int)MotionDataFps);
+        }
+        else
+        {
+            qh = qf + 12;
+        }
+        if (qh >= CSVReader.lineLength)
+        {
             qh = CSVReader.lineLength - 1;
         }
 
@@ -242,21 +291,29 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         rightPreviewCamera.projectionMatrix = timewarpCamProjectionMatrix;
         rightCaptureCamera.projectionMatrix = timewarpCamProjectionMatrix;
 
+        Vector2 center = new Vector2(array1.left + array1.right / 2, array1.top + array1.bottom / 2);
+
+        float rpWidth = (array1.right - array1.left) / ((RESOLUTION + center.x) - (-RESOLUTION + center.x));
+        float rpHeight = (array1.top - array1.bottom) / ((RESOLUTION + center.y) - (-RESOLUTION + center.y));
+
+        float epWidth = ((RESOLUTION + center.x) - (-RESOLUTION + center.x));
+        float epHeight = ((RESOLUTION + center.y) - (-RESOLUTION + center.y));
+
         leftTargetTexture.localScale = new Vector3(
-            array1.right - array1.left,
-            array1.top - array1.bottom,
+            epWidth,
+            epHeight,
             1
             );
 
         rightTargetTexture.localScale = new Vector3(
-            array1.right - array1.left,
-            array1.top - array1.bottom,
+            epWidth,
+            epHeight,
             1
             );
 
         leftTargetTexture.localPosition = new Vector3(
-            (array1.right + array1.left)/ 2,
-            (array1.top + array1.bottom)/ 2,
+            (array1.right + array1.left) / 2,
+            (array1.top + array1.bottom) / 2,
             1.0f
             );
 
@@ -265,6 +322,23 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             (array1.top + array1.bottom) / 2,
             1.0f
             );
+
+        playbackCameras[0].rect = new Rect(
+            0.5f - (rpWidth / epWidth) / 2,
+            0.5f - (rpWidth / epHeight) / 2,
+            rpWidth / epWidth,
+            rpHeight / epHeight
+            );
+
+        playbackCameras[1].rect = new Rect(
+            0.5f - (rpWidth / epWidth) / 2,
+            0.5f - (rpWidth / epHeight) / 2,
+            rpWidth / epWidth,
+            rpHeight / epHeight
+            );
+
+        playbackCameras[0].targetTexture.Release();
+        playbackCameras[1].targetTexture.Release();
     }
 
     private bool parseRotateDataSetting(bool isPredict, int dataNum, ref Quaternion result) {
@@ -317,7 +391,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Time.timeScale = 0.0f;
     }
 
-    public float motionDataFps { get { return 120.0f; } } // assume input motion data rate is 120 fps
+    public float MotionDataFps { get; set; } // assume input motion data rate is 120 fps
 
     // handle playback & capture control from capture manager
     public delegate void PlaybackStateChangeHandler(MotionPredictionPlaybackCamera sender, PlaybackState state);
@@ -334,6 +408,11 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
 
         CSVReader.Init(csvPath);
+
+        CheckTimestampAndSetMotionDataFps();
+        CheckMatricData();
+
+        captureManager.SetPlaybackMode(isMotionData);
         //try {
         //    CSVReader.SetPath(csvPath);
         //    //data = CSVReader.Read(csvPath);
