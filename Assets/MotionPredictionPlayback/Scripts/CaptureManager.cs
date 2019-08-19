@@ -60,7 +60,7 @@ public class CaptureManager : MonoBehaviour {
         RenderTexture old = RenderTexture.active;
 
         RenderTexture.active = _captureTargetTexture;
-        Texture2D image = new Texture2D(_captureTargetTexture.width, _captureTargetTexture.height);
+        Texture2D image = new Texture2D(_captureTargetTexture.width, _captureTargetTexture.height, TextureFormat.RGB24, false);
         image.ReadPixels(new Rect(0, 0, image.width, image.height), 0, 0);
         image.Apply();
 
