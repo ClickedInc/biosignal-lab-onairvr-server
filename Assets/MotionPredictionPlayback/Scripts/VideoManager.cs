@@ -159,8 +159,6 @@ public class VideoManager : MonoBehaviour
             Play();
     }
 
-    
-
     private void OnPrepareCompleted(VideoPlayer source)
     {
         source.time = saveTime;
