@@ -25,8 +25,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
     private const float RESOLUTION = 1920f / 1080f;
 
-    private double updateTimeInterval;
-    private double lastUpdateTime;
+    private double startTime;
     private int playbackRangeFrom = 0;
     private int playbackRangeTo = int.MaxValue;
     private int qf;
@@ -34,6 +33,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     private string csvPath;
     private string captureOutputPath;
     private bool isMotionData;
+    private bool isGetStartTime;
     private Camera[] playbackCameras = new Camera[2];
     private CaptureManager captureManager;
     private Camera leftPreviewCamera;
@@ -50,7 +50,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Playing,
         Capturing
     }
-    private PlaybackState playbackState = PlaybackState.Stopped;
+    public PlaybackState playbackState = PlaybackState.Stopped;
 
     public enum PlaybackMode : uint {
 
@@ -98,33 +98,39 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
     private void Start() {
         captureManager.Init(this);
-
-        lastUpdateTime = Time.realtimeSinceStartup;
     }
 
     private void Update() {
-        if (playbackState != PlaybackState.Playing)
+        if (playbackState == PlaybackState.Stopped)
             return;
 
-        double timeStampInterval = (FlicksToSecond((double)CSVReader.ReadLine(qf + 1)["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(qf)["timestamp"]));
-
-        updateTimeInterval += Time.realtimeSinceStartup - lastUpdateTime;
-        lastUpdateTime = Time.realtimeSinceStartup;
-
-        if (timeStampInterval <= updateTimeInterval)
+        if (!isGetStartTime)
         {
-            double timeStampInterval2 = (FlicksToSecond((double)CSVReader.ReadLine(qf + 2)["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(qf)["timestamp"]));
+            startTime = Time.realtimeSinceStartup;
+            isGetStartTime = true;
+        }
 
-            double t1 = Math.Abs(updateTimeInterval - timeStampInterval);
-            double t2 = Math.Abs(updateTimeInterval - timeStampInterval2);
+        if (playbackState == PlaybackState.Playing)
+        {
+            double timeStampInterval = (FlicksToSecond((double)CSVReader.ReadLine(qf + 1)["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(playbackRangeFrom)["timestamp"]));
+            double updateTimeInterval = Time.realtimeSinceStartup - startTime;
 
-            if (t1 > t2)
+            if (timeStampInterval <= updateTimeInterval)
             {
-                qf += 1;
+                int count = 0;
+
+                while ((FlicksToSecond((double)CSVReader.ReadLine(qf + (count + 2))["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(playbackRangeFrom)["timestamp"])) <= updateTimeInterval)
+                {
+                    count++;
+                }
+
+                qf = qf + count;
+
+                StartCoroutine(SimulationControl());
             }
-
-            updateTimeInterval = 0;
-
+        }
+        else if (playbackState == PlaybackState.Capturing)
+        {
             StartCoroutine(SimulationControl());
         }
     }
