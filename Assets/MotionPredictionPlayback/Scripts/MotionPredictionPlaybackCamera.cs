@@ -23,15 +23,17 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
     }
 
+    private const float RESOLUTION = 1920f / 1080f;
+
+    private double startTime;
     private int playbackRangeFrom = 0;
     private int playbackRangeTo = int.MaxValue;
     private int qf;
     private int captureNum;
     private string csvPath;
     private string captureOutputPath;
-    //private List<Dictionary<string, object>> data;
-    private MatrixArray predictedMatrixArray = new MatrixArray();
-    private MatrixArray inputMatrixArray = new MatrixArray();
+    private bool isMotionData;
+    private bool isGetStartTime;
     private Camera[] playbackCameras = new Camera[2];
     private CaptureManager captureManager;
     private Camera leftPreviewCamera;
@@ -48,20 +50,50 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         Playing,
         Capturing
     }
-    private PlaybackState playbackState = PlaybackState.Stopped;
+    public PlaybackState playbackState = PlaybackState.Stopped;
 
     public enum PlaybackMode : uint {
-        NotPredict_NoTimeWarp = 0,
-        NotPredict_TimeWarp,
-        Predict_NoTimeWarp,
+
+        Predict_NoTimeWarp = 0,
         Predict_TimeWarp,
+        NotPredict_NoTimeWarp,
+        NotPredict_TimeWarp,
 
         Max
     }
     private PlaybackMode playbackMode = PlaybackMode.Predict_TimeWarp;
 
     private void Awake() {
-        Init();
+        var playback = transform.GetComponentInParent<MotionPredictionPlayback>();
+
+        playbackCameras[0] = transform.Find("LeftCam").GetComponent<Camera>();
+        playbackCameras[1] = transform.Find("RightCam").GetComponent<Camera>();
+
+        Time.captureFramerate = 60;
+
+        GameObject captureModule = Instantiate(Resources.Load("CaptureModule") as GameObject);
+        captureManager = captureModule.GetComponent<CaptureManager>();
+        leftPreviewCamera = captureModule.transform.Find("LeftSide/Camera").GetComponent<Camera>();
+        leftCaptureCamera = captureModule.transform.Find("LeftSide/Camera/CaptureCamera").GetComponent<Camera>();
+        leftTargetTextureAnchor = captureModule.transform.Find("LeftSide/Anchor");
+        leftTargetTexture = captureModule.transform.Find("LeftSide/Anchor/TargetTexture");
+        rightPreviewCamera = captureModule.transform.Find("RightSide/Camera").GetComponent<Camera>();
+        rightCaptureCamera = captureModule.transform.Find("RightSide/Camera/CaptureCamera").GetComponent<Camera>();
+        rightTargetTextureAnchor = captureModule.transform.Find("RightSide/Anchor");
+        rightTargetTexture = captureModule.transform.Find("RightSide/Anchor/TargetTexture");
+
+        PlayerSettings.defaultScreenWidth = 2048;
+        PlayerSettings.defaultScreenHeight = 1024;
+
+        captureModule.transform.position = Vector3.down * 1000.0f;
+        leftPreviewCamera.aspect = rightPreviewCamera.aspect =
+        leftCaptureCamera.aspect = rightCaptureCamera.aspect = 1.0f;
+
+        // apply GearVR head model
+        playbackCameras[0].transform.localPosition = new Vector3(-0.032f, 0.097f, 0.0805f);
+        playbackCameras[1].transform.localPosition = new Vector3(0.032f, 0.097f, 0.0805f);
+
+        Time.timeScale = 0.0f;
     }
 
     private void Start() {
@@ -69,78 +101,134 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     }
 
     private void Update() {
-        StartCoroutine(SimulationControl());
-    }
+        if (playbackState == PlaybackState.Stopped)
+            return;
 
-    private int LatencyFrameCirculate(double latencyTime, int inputFramerate) {
-        return (int)(latencyTime * inputFramerate / 1000);
-    }
-
-    private string playbackModeDescription(PlaybackMode mode) {
-        switch (mode) {
-            case PlaybackMode.NotPredict_NoTimeWarp:
-                return "NotPredict_NoTimeWarp";
-            case PlaybackMode.NotPredict_TimeWarp:
-                return "NotPredict_TimeWarp";
-            case PlaybackMode.Predict_NoTimeWarp:
-                return "Predict_NoTimeWarp";
-            case PlaybackMode.Predict_TimeWarp:
-                return "Predict_TimeWarp";
-        }
-        Debug.Assert(false);
-        return "Unknown";
-    }
-
-    private void Simulate(int num, PlaybackMode mode, bool capture) {
-        bool usePredict = mode == PlaybackMode.Predict_NoTimeWarp || mode == PlaybackMode.Predict_TimeWarp;
-        bool useTimeWarp = mode == PlaybackMode.NotPredict_TimeWarp || mode == PlaybackMode.Predict_TimeWarp;
-
-        Quaternion rotationQF = Quaternion.identity;
-        Quaternion rotationQH = Quaternion.identity;
-
-        int qh = qf + LatencyFrameCirculate((double)CSVReader.ReadLine(qf)["prediction_time"], (int)motionDataFps);
-        if (qh >= CSVReader.lineLength) {
-            qh = CSVReader.lineLength - 1;
+        if (!isGetStartTime)
+        {
+            startTime = Time.realtimeSinceStartup;
+            isGetStartTime = true;
         }
 
-        if (parseRotateDataSetting(usePredict, qf, ref rotationQF) == false ||
-            parseRotateDataSetting(false, qh, ref rotationQH) == false) {
+        if (playbackState == PlaybackState.Playing)
+        {
+            double timeStampInterval = (FlicksToSecond((double)CSVReader.ReadLine(qf + 1)["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(playbackRangeFrom)["timestamp"]));
+            double updateTimeInterval = Time.realtimeSinceStartup - startTime;
+
+            if (timeStampInterval <= updateTimeInterval)
+            {
+                int count = 0;
+
+                while ((FlicksToSecond((double)CSVReader.ReadLine(qf + (count + 2))["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(playbackRangeFrom)["timestamp"])) <= updateTimeInterval)
+                {
+                    count++;
+                }
+
+                qf = qf + count;
+
+                StartCoroutine(SimulationControl());
+            }
+        }
+        else if (playbackState == PlaybackState.Capturing)
+        {
+            StartCoroutine(SimulationControl());
+        }
+    }
+
+    public float MotionDataFps { get; set; } // assume input motion data rate is 120 fps
+
+    // handle playback & capture control from capture manager
+    public delegate void PlaybackStateChangeHandler(MotionPredictionPlaybackCamera sender, PlaybackState state);
+    public event PlaybackStateChangeHandler PlaybackStateChanged;
+
+    public delegate void PlaybackCaptureHandler(MotionPredictionPlaybackCamera sender, int frame);
+    public event PlaybackCaptureHandler PlaybackCaptured;
+
+    public void ToggleCapture()
+    {
+        Debug.Assert(playbackState != PlaybackState.Playing);
+
+        if (playbackState == PlaybackState.Stopped)
+        {
+            playbackState = PlaybackState.Capturing;
+
+            captureManager.Configure(captureOutputPath, leftCaptureCamera.targetTexture);
+
+            captureNum = 0;
+            qf = playbackRangeFrom;
+            Time.timeScale = 1.0f;
+        }
+        else
+        {
+            playbackState = PlaybackState.Stopped;
+            Time.timeScale = 0.0f;
+            isGetStartTime = false;
+        }
+
+        if (PlaybackStateChanged != null)
+        {
+            PlaybackStateChanged(this, playbackState);
+        }
+    }
+
+    public void SetInputMotionDataFile(string path)
+    {
+        csvPath = path;
+
+        if (string.IsNullOrEmpty(path))
+        {
             return;
         }
 
-        transform.rotation = rotationQF;
-        leftPreviewCamera.transform.localRotation = rightPreviewCamera.transform.localRotation = useTimeWarp ? rotationQH : rotationQF;
-        leftTargetTextureAnchor.localRotation = rightTargetTextureAnchor.localRotation = rotationQF;
+        CSVReader.Init(csvPath);
 
+        CheckTimestampAndSetMotionDataFps();
+        CheckMatricData();
 
-        predictedMatrixArray.ChangeElement(
-            (float)(double)CSVReader.ReadLine(qf)["predicted_projection_left"],
-            (float)(double)CSVReader.ReadLine(qf)["predicted_projection_right"],
-            (float)(double)CSVReader.ReadLine(qf)["predicted_projection_bottom"],
-            (float)(double)CSVReader.ReadLine(qf)["predicted_projection_top"]
-            );
+        captureManager.SetPlaybackMode(isMotionData);
+    }
 
-        inputMatrixArray.ChangeElement(
-            (float)(double)CSVReader.ReadLine(qf)["input_projection_left"],
-            (float)(double)CSVReader.ReadLine(qf)["input_projection_right"],
-            (float)(double)CSVReader.ReadLine(qf)["input_projection_bottom"],
-            (float)(double)CSVReader.ReadLine(qf)["input_projection_top"]
-            );
+    public void SetCaptureOutputPath(string path)
+    {
+        captureOutputPath = path;
+    }
 
-        if (usePredict) ModifyCameraProjectionAndTexture(predictedMatrixArray, inputMatrixArray);
-        else ModifyCameraProjectionAndTexture(inputMatrixArray, inputMatrixArray);
+    public void SetPlaybackMode(PlaybackMode mode)
+    {
+        playbackMode = mode;
+    }
 
-        if (capture) {
-            foreach (var cam in playbackCameras) {
-                cam.Render();
-            }
+    public void SetPlaybackRangeFrom(int value)
+    {
+        playbackRangeFrom = value;
+    }
 
-            leftCaptureCamera.Render();
-            rightCaptureCamera.Render();
+    public void SetPlaybackRangeTo(int value)
+    {
+        playbackRangeTo = value;
+    }
 
-            if (qf <= playbackRangeTo) {
-                captureManager.CaptureScreenshot((double)CSVReader.ReadLine(qf)["timestamp"], playbackModeDescription(mode), num);
-            }
+    public void TogglePlay()
+    {
+        Debug.Assert(playbackState != PlaybackState.Capturing);
+
+        if (playbackState == PlaybackState.Stopped)
+        {
+            playbackState = PlaybackState.Playing;
+
+            qf = playbackRangeFrom;
+            Time.timeScale = 1.0f;
+        }
+        else
+        {
+            playbackState = PlaybackState.Stopped;
+            Time.timeScale = 0.0f;
+            isGetStartTime = false;
+        }
+
+        if (PlaybackStateChanged != null)
+        {
+            PlaybackStateChanged(this, playbackState);
         }
     }
 
@@ -173,13 +261,115 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         return m;
     }
 
+    private int LatencyFrameCirculate(double latencyTime, int inputFramerate) {
+        return (int)(latencyTime * inputFramerate / 1000);
+    }
+
+    private string playbackModeDescription(PlaybackMode mode) {
+        switch (mode) {
+            case PlaybackMode.NotPredict_NoTimeWarp:
+                return "NotPredict_NoTimeWarp";
+            case PlaybackMode.NotPredict_TimeWarp:
+                return "NotPredict_TimeWarp";
+            case PlaybackMode.Predict_NoTimeWarp:
+                return "Predict_NoTimeWarp";
+            case PlaybackMode.Predict_TimeWarp:
+                return "Predict_TimeWarp";
+        }
+        Debug.Assert(false);
+        return "Unknown";
+    }
+
+    private float FlicksToSecond(double flicks)
+    {
+        return (float)flicks * 1 / 705600000;
+    }
+
+    private void CheckMatricData()
+    {
+        bool result = CSVReader.GetExistKey("prediction_time");
+
+        isMotionData = result;
+    }
+
+    private void CheckTimestampAndSetMotionDataFps()
+    {
+        int timeStampNum = 0;
+
+        double firstTimeStamp = FlicksToSecond((double)CSVReader.ReadLine(0)["timestamp"]);
+        double indexTimeStamp = 0;
+
+        while (indexTimeStamp - firstTimeStamp < 10.0f)
+        {
+            indexTimeStamp = FlicksToSecond((double)CSVReader.ReadLine(timeStampNum)["timestamp"]);
+
+            timeStampNum++;
+        }
+
+        if (timeStampNum >= 700)
+        {
+            MotionDataFps = 120.0f;
+        }
+        else
+        {
+            MotionDataFps = 60.0f;
+        }
+    }
+
+    private void Simulate(int num, PlaybackMode mode, bool capture) {
+        bool usePredict = mode == PlaybackMode.Predict_NoTimeWarp || mode == PlaybackMode.Predict_TimeWarp;
+        bool useTimeWarp = mode == PlaybackMode.NotPredict_TimeWarp || mode == PlaybackMode.Predict_TimeWarp;
+
+        Quaternion rotationQF = Quaternion.identity;
+        MatrixArray projectionQF = new MatrixArray();
+        Quaternion rotationQH = Quaternion.identity;
+        MatrixArray projectionQH = new MatrixArray();
+
+        int qh = 0;
+
+        if (isMotionData) {
+            double currentTimeStamp = FlicksToSecond((double)CSVReader.ReadLine(qf)["timestamp"]);
+            double accumulatedTimeStampInterval = 0;
+            int frame = 0;
+
+            while (accumulatedTimeStampInterval < 0.1f)
+            {
+                if (qf + frame >= CSVReader.lineLength - 3)
+                    return;
+
+                frame++;
+
+                accumulatedTimeStampInterval = FlicksToSecond((double)CSVReader.ReadLine(qf + frame)["timestamp"]) - currentTimeStamp;
+            }
+            qh = qf + frame;
+        }
+        else {
+            qh = qf;
+        }
+
+        if (getMotionData(usePredict, qf, ref rotationQF, ref projectionQF) == false ||
+            getMotionData(false, qh, ref rotationQH, ref projectionQH) == false) {
+            return;
+        }
+
+        modifyCameraProjectionAndTexture(rotationQF, projectionQF, rotationQH, projectionQH, useTimeWarp);
+
+        if (capture) {
+            foreach (var cam in playbackCameras) {
+                cam.Render();
+            }
+
+            leftCaptureCamera.Render();
+            rightCaptureCamera.Render();
+
+            if (qf <= playbackRangeTo) {
+                captureManager.CaptureScreenshot((double)CSVReader.ReadLine(qf)["timestamp"], playbackModeDescription(mode), num);
+            }
+        }
+    }
+
     private IEnumerator SimulationControl() {
         yield return new WaitForEndOfFrame();
-
-        if (qf + 1 >= CSVReader.lineLength)
-        {
-            yield break;
-        }
 
         if (playbackState == PlaybackState.Stopped) {
             yield break;
@@ -203,32 +393,57 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         captureNum++;
         qf++;
 
-        if (qf >= CSVReader.lineLength || qf > playbackRangeTo) {
+        if (qf >= CSVReader.lineLength - 4 || qf > playbackRangeTo) {
             playbackState = PlaybackState.Stopped;
             Time.timeScale = 0.0f;
+            isGetStartTime = false;
 
-            if (PlaybackStateChanged != null) {
-                PlaybackStateChanged(this, playbackState);
-            }
+            PlaybackStateChanged(this, playbackState);
         }
     }
 
-    private void ModifyCameraProjectionAndTexture(MatrixArray array1, MatrixArray array2)
+    private bool getMotionData(bool isPredict, int dataNum, ref Quaternion orientation, ref MatrixArray projection) {
+        if (dataNum >= CSVReader.lineLength - 1) {
+            return false;
+        }
+
+        string orientationPrefix = isPredict ? "predicted_orientation_" : "input_orientation_";
+        string projectionPreix = isPredict ? "predicted_projection_" : "input_projection_";
+
+        orientation.x = -(float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "x"];
+        orientation.y = -(float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "y"];
+        orientation.z = (float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "z"];
+        orientation.w = (float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "w"];
+
+        projection.ChangeElement(
+            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "left"],
+            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "right"],
+            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "bottom"],
+            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "top"]
+        );
+        return true;
+    }
+
+    private void modifyCameraProjectionAndTexture(Quaternion rotationQF, MatrixArray projectionQF, Quaternion rotationQH, MatrixArray projectionQH, bool useTimeWarp)
     {
+        transform.rotation = rotationQF;
+        leftPreviewCamera.transform.localRotation = rightPreviewCamera.transform.localRotation = useTimeWarp ? rotationQH : rotationQF;
+        leftTargetTextureAnchor.localRotation = rightTargetTextureAnchor.localRotation = rotationQF;
+
         Matrix4x4 playbackCamProjectionMatrix = MatrixCalculate(
-           array1.left * playbackCameras[0].nearClipPlane,
-           array1.right * playbackCameras[0].nearClipPlane,
-           array1.bottom * playbackCameras[0].nearClipPlane,
-           array1.top * playbackCameras[0].nearClipPlane,
+           projectionQF.left * playbackCameras[0].nearClipPlane,
+           projectionQF.right * playbackCameras[0].nearClipPlane,
+           projectionQF.bottom * playbackCameras[0].nearClipPlane,
+           projectionQF.top * playbackCameras[0].nearClipPlane,
            playbackCameras[0].nearClipPlane,
            playbackCameras[0].farClipPlane
            );
 
         Matrix4x4 timewarpCamProjectionMatrix = MatrixCalculate(
-           array2.left * leftPreviewCamera.nearClipPlane,
-           array2.right * leftPreviewCamera.nearClipPlane,
-           array2.bottom * leftPreviewCamera.nearClipPlane,
-           array2.top * leftPreviewCamera.nearClipPlane,
+           projectionQH.left * leftPreviewCamera.nearClipPlane,
+           projectionQH.right * leftPreviewCamera.nearClipPlane,
+           projectionQH.bottom * leftPreviewCamera.nearClipPlane,
+           projectionQH.top * leftPreviewCamera.nearClipPlane,
            leftPreviewCamera.nearClipPlane,
            leftPreviewCamera.farClipPlane
            );
@@ -242,162 +457,54 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         rightPreviewCamera.projectionMatrix = timewarpCamProjectionMatrix;
         rightCaptureCamera.projectionMatrix = timewarpCamProjectionMatrix;
 
+        Vector2 center = new Vector2(projectionQF.left + projectionQF.right / 2, projectionQF.top + projectionQF.bottom / 2);
+
+        float rpWidth = projectionQF.right - projectionQF.left;
+        float rpHeight = projectionQF.top - projectionQF.bottom;
+
+        float epWidth = 2 * RESOLUTION;
+        float epHeight = 2 * RESOLUTION;
+
         leftTargetTexture.localScale = new Vector3(
-            array1.right - array1.left,
-            array1.top - array1.bottom,
+            epWidth,
+            epHeight,
             1
             );
 
         rightTargetTexture.localScale = new Vector3(
-            array1.right - array1.left,
-            array1.top - array1.bottom,
+            epWidth,
+            epHeight,
             1
             );
 
         leftTargetTexture.localPosition = new Vector3(
-            (array1.right + array1.left)/ 2,
-            (array1.top + array1.bottom)/ 2,
+            (projectionQF.right + projectionQF.left) / 2,
+            (projectionQF.top + projectionQF.bottom) / 2,
             1.0f
             );
 
         rightTargetTexture.localPosition = new Vector3(
-            (array1.right + array1.left) / 2,
-            (array1.top + array1.bottom) / 2,
+            (projectionQF.right + projectionQF.left) / 2,
+            (projectionQF.top + projectionQF.bottom) / 2,
             1.0f
             );
+
+        playbackCameras[0].rect = new Rect(
+            0.5f - (rpWidth / epWidth) / 2,
+            0.5f - (rpWidth / epHeight) / 2,
+            rpWidth / epWidth,
+            rpHeight / epHeight
+            );
+
+        playbackCameras[1].rect = new Rect(
+            0.5f - (rpWidth / epWidth) / 2,
+            0.5f - (rpWidth / epHeight) / 2,
+            rpWidth / epWidth,
+            rpHeight / epHeight
+            );
+
+        playbackCameras[0].targetTexture.Release();
+        playbackCameras[1].targetTexture.Release();
     }
 
-    private bool parseRotateDataSetting(bool isPredict, int dataNum, ref Quaternion result) {
-        if (dataNum + 1 >= CSVReader.lineLength) {
-            return false;
-        }
-
-        string keyPrefix = isPredict ? "predicted_orientation_" : "input_orientation_";
-
-        result.x = (float)(double)CSVReader.ReadLine(dataNum)[keyPrefix + "x"];
-        result.y = (float)(double)CSVReader.ReadLine(dataNum)[keyPrefix + "y"];
-        result.z = (float)(double)CSVReader.ReadLine(dataNum)[keyPrefix + "z"];
-        result.w = (float)(double)CSVReader.ReadLine(dataNum)[keyPrefix + "w"];
-        return true;
-    }
-
-    private void Init() {
-        var playback = transform.GetComponentInParent<MotionPredictionPlayback>();
-
-        //this.csvPath = playback.csvPath;
-        //this.captureOutputPath = playback.captureOutputPath;
-
-        playbackCameras[0] = transform.Find("LeftCam").GetComponent<Camera>();
-        playbackCameras[1] = transform.Find("RightCam").GetComponent<Camera>();
-
-        Time.captureFramerate = 60;
-
-        GameObject captureModule = Instantiate(Resources.Load("CaptureModule") as GameObject);
-        captureManager = captureModule.GetComponent<CaptureManager>();
-        leftPreviewCamera = captureModule.transform.Find("LeftSide/Camera").GetComponent<Camera>();
-        leftCaptureCamera = captureModule.transform.Find("LeftSide/Camera/CaptureCamera").GetComponent<Camera>();
-        leftTargetTextureAnchor = captureModule.transform.Find("LeftSide/Anchor");
-        leftTargetTexture = captureModule.transform.Find("LeftSide/Anchor/TargetTexture");
-        rightPreviewCamera = captureModule.transform.Find("RightSide/Camera").GetComponent<Camera>();
-        rightCaptureCamera = captureModule.transform.Find("RightSide/Camera/CaptureCamera").GetComponent<Camera>();
-        rightTargetTextureAnchor = captureModule.transform.Find("RightSide/Anchor");
-        rightTargetTexture = captureModule.transform.Find("RightSide/Anchor/TargetTexture");
-
-        PlayerSettings.defaultScreenWidth = 2048;
-        PlayerSettings.defaultScreenHeight = 1024;
-
-        captureModule.transform.position = Vector3.down * 1000.0f;
-        leftPreviewCamera.aspect = rightPreviewCamera.aspect =
-        leftCaptureCamera.aspect = rightCaptureCamera.aspect = 1.0f;
-
-        // apply GearVR head model
-        playbackCameras[0].transform.localPosition = new Vector3(-0.032f, 0.097f, 0.0805f);
-        playbackCameras[1].transform.localPosition = new Vector3(0.032f, 0.097f, 0.0805f);
-
-        Time.timeScale = 0.0f;
-    }
-
-    public float motionDataFps { get { return 120.0f; } } // assume input motion data rate is 120 fps
-
-    // handle playback & capture control from capture manager
-    public delegate void PlaybackStateChangeHandler(MotionPredictionPlaybackCamera sender, PlaybackState state);
-    public event PlaybackStateChangeHandler PlaybackStateChanged;
-
-    public delegate void PlaybackCaptureHandler(MotionPredictionPlaybackCamera sender, int frame);
-    public event PlaybackCaptureHandler PlaybackCaptured;
-
-    public void SetInputMotionDataFile(string path) {
-        csvPath = path;
-
-        if (string.IsNullOrEmpty(path)) {
-            return;
-        }
-
-        CSVReader.Init(csvPath);
-        //try {
-        //    CSVReader.SetPath(csvPath);
-        //    //data = CSVReader.Read(csvPath);
-        //}
-        //catch (Exception e) {
-        //    Debug.Assert(false, "[Motion Prediction Playback] failed to read the input motion data file: " + path);
-        //    Debug.Assert(false, e.ToString());
-        //}
-    }
-
-    public void SetCaptureOutputPath(string path) {
-        captureOutputPath = path;
-    }
-
-    public void SetPlaybackMode(PlaybackMode mode) {
-        playbackMode = mode;
-    }
-
-    public void SetPlaybackRangeFrom(int value) {
-        playbackRangeFrom = value;
-    }
-
-    public void SetPlaybackRangeTo(int value) {
-        playbackRangeTo = value;
-    }
-
-    public void TogglePlay() {
-        Debug.Assert(playbackState != PlaybackState.Capturing);
-
-        if (playbackState == PlaybackState.Stopped) {
-            playbackState = PlaybackState.Playing;
-
-            qf = playbackRangeFrom;
-            Time.timeScale = 1.0f;
-        }
-        else {
-            playbackState = PlaybackState.Stopped;
-            Time.timeScale = 0.0f;
-        }
-
-        if (PlaybackStateChanged != null) {
-            PlaybackStateChanged(this, playbackState);
-        }
-    }
-
-    public void ToggleCapture() {
-        Debug.Assert(playbackState != PlaybackState.Playing);
-
-        if (playbackState == PlaybackState.Stopped) {
-            playbackState = PlaybackState.Capturing;
-
-            captureManager.Configure(captureOutputPath, leftCaptureCamera.targetTexture);
-
-            captureNum = 0;
-            qf = playbackRangeFrom;
-            Time.timeScale = 1.0f;
-        }
-        else {
-            playbackState = PlaybackState.Stopped;
-            Time.timeScale = 0.0f;
-        }
-
-        if (PlaybackStateChanged != null) {
-            PlaybackStateChanged(this, playbackState);
-        }
-    }
 }

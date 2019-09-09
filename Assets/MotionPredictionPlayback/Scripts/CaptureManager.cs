@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
@@ -59,7 +60,7 @@ public class CaptureManager : MonoBehaviour {
         RenderTexture old = RenderTexture.active;
 
         RenderTexture.active = _captureTargetTexture;
-        Texture2D image = new Texture2D(_captureTargetTexture.width, _captureTargetTexture.height);
+        Texture2D image = new Texture2D(_captureTargetTexture.width, _captureTargetTexture.height, TextureFormat.RGB24, false);
         image.ReadPixels(new Rect(0, 0, image.width, image.height), 0, 0);
         image.Apply();
 
@@ -80,6 +81,7 @@ public class CaptureManager : MonoBehaviour {
     private Text _textButtonPlay;
     private Button _buttonCapture;
     private Text _textButtonCapture;
+    private Dropdown _playbackMode;
 
     private void Awake() {
         _textInputMotionData = transform.Find("Canvas/Panel/InputMotionData/Value").GetComponent<Text>();
@@ -88,6 +90,31 @@ public class CaptureManager : MonoBehaviour {
         _textButtonPlay = transform.Find("Canvas/Panel/Play/Text").GetComponent<Text>();
         _buttonCapture = transform.Find("Canvas/Panel/Capture").GetComponent<Button>();
         _textButtonCapture = transform.Find("Canvas/Panel/Capture/Text").GetComponent<Text>();
+        _playbackMode = transform.Find("Canvas/Panel/PlaybackMode/Dropdown").GetComponent<Dropdown>();
+    }
+
+    public void SetPlaybackMode(bool isMotionData)
+    {
+        List<string> option = new List<string>();
+        if (isMotionData)
+        {
+            option = new List<string>() {
+                "Predict_NoTimeWarp",
+                "Predict_TimeWarp",
+                "NotPredict_NoTimeWarp",
+                "NotPredict_TimeWarp"
+            };
+        }
+        else
+        {
+            option = new List<string>() {
+                "Predict_NoTimeWarp",
+                "Predict_TimeWarp"
+            };
+        }
+
+        _playbackMode.ClearOptions();
+        _playbackMode.AddOptions(option);
     }
 
     public void BrowseInputMotionDataFile() {

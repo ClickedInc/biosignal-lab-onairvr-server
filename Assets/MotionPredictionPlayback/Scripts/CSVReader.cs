@@ -13,6 +13,7 @@ public class CSVReader
     static string[] lines;
     static string[] header;
     static string SPLIT_RE = @",(?=(?:[^""]*""[^""]*"")*(?![^""]*""))";
+
     static string LINE_SPLIT_RE = @"\r\n|\n\r|\n|\r";
     static char[] TRIM_CHARS = { '\"' };
 
@@ -61,13 +62,14 @@ public class CSVReader
 
         filePath = path;
 
-        lines = Regex.Split(csvData, LINE_SPLIT_RE);
+        lines = csvData.Split('\r');
 
         lineLength = lines.Length;
 
-        header = Regex.Split(lines[0], SPLIT_RE);
+        header = lines[0].Split(',');
     }
 
+    private static Dictionary<string, object> entry = new Dictionary<string, object>();
     public static Dictionary<string, object> ReadLine(int lineIndex)
     {
         if (lineLength <= lineIndex + 1)
@@ -75,9 +77,8 @@ public class CSVReader
             return null;
         }
 
-        var values = Regex.Split(lines[lineIndex + 1], SPLIT_RE);
+        var values = lines[lineIndex + 1].Split(',');
 
-        var entry = new Dictionary<string, object>();
         for (var j = 0; j < header.Length && j < values.Length; j++)
         {
             string value = values[j];
@@ -92,5 +93,16 @@ public class CSVReader
         }
 
         return entry;
+    }
+
+    public static bool GetExistKey(string key)
+    {
+        foreach (string item in header)
+        {
+            if (item == key)
+                return true;
+        }
+
+        return false;
     }
 }

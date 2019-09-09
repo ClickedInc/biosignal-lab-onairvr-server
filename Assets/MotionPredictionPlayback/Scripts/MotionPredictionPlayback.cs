@@ -66,7 +66,7 @@ public class MotionPredictionPlayback : MonoBehaviour {
 
     private void playbackStateChanged(MotionPredictionPlaybackCamera sender, MotionPredictionPlaybackCamera.PlaybackState state) {
         if (state == MotionPredictionPlaybackCamera.PlaybackState.Playing) {
-            onPlayPreview.Invoke(_playbackCamera.motionDataFps);
+            onPlayPreview.Invoke(_playbackCamera.MotionDataFps);
         }
         else if (state == MotionPredictionPlaybackCamera.PlaybackState.Capturing) {
             onStartCapture.Invoke();
@@ -77,6 +77,6 @@ public class MotionPredictionPlayback : MonoBehaviour {
     }
 
     private void playbackCaptured(MotionPredictionPlaybackCamera sender, int frame) {
-        onSeek.Invoke(frame / _playbackCamera.motionDataFps);
+        onSeek.Invoke(frame / _playbackCamera.MotionDataFps);
     }
 }
