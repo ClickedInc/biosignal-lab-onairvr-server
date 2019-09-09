@@ -162,6 +162,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         {
             playbackState = PlaybackState.Stopped;
             Time.timeScale = 0.0f;
+            isGetStartTime = false;
         }
 
         if (PlaybackStateChanged != null)
@@ -222,6 +223,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         {
             playbackState = PlaybackState.Stopped;
             Time.timeScale = 0.0f;
+            isGetStartTime = false;
         }
 
         if (PlaybackStateChanged != null)
@@ -394,6 +396,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         if (qf >= CSVReader.lineLength - 4 || qf > playbackRangeTo) {
             playbackState = PlaybackState.Stopped;
             Time.timeScale = 0.0f;
+            isGetStartTime = false;
 
             PlaybackStateChanged(this, playbackState);
         }
