@@ -296,7 +296,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     {
         int timeStampNum = 0;
 
-        double firstTimeStamp = FlicksToSecond((double)CSVReader.ReadLine(0)["timestamp"]);
+        double firstTimeStamp = FlicksToSecond((double)CSVReader.ReadLine(1)["timestamp"]);
         double indexTimeStamp = 0;
 
         while (indexTimeStamp - firstTimeStamp < 10.0f)
@@ -491,14 +491,14 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
         playbackCameras[0].rect = new Rect(
             0.5f - (rpWidth / epWidth) / 2,
-            0.5f - (rpWidth / epHeight) / 2,
+            0.5f - (rpHeight / epHeight) / 2,
             rpWidth / epWidth,
             rpHeight / epHeight
             );
 
         playbackCameras[1].rect = new Rect(
             0.5f - (rpWidth / epWidth) / 2,
-            0.5f - (rpWidth / epHeight) / 2,
+            0.5f - (rpHeight / epHeight) / 2,
             rpWidth / epWidth,
             rpHeight / epHeight
             );
