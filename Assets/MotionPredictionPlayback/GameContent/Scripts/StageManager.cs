@@ -38,7 +38,7 @@ public class StageManager : MonoBehaviour {
 
 	void Awake () {
         isClear = true;
-        remainTime = 10;
+        remainTime = 20;
     }
 
     void Start()

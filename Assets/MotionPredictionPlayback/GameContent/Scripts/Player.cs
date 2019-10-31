@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Player : MonoBehaviour {
-   
+
+    [SerializeField] private AudioPlayer audioPlayer;
     [SerializeField] private GameObject dropableApple;
     [SerializeField] private GameObject head;
 
@@ -11,6 +12,7 @@ public class Player : MonoBehaviour {
     private GameObject currentDropedApple;
     private ObjectPooler dropableApplePooler;
     private ObjectPooler targetPooler;
+    private int pickIndex;
 
     private void Start()
     {
@@ -20,7 +22,7 @@ public class Player : MonoBehaviour {
         dropableApplePooler.Pool(dropableApple, 20);
     }
 
-    void Update () {
+    private void LateUpdate () {
         if (isCatched)
         {
             currentDropedApple.transform.position = head.transform.forward * 5;
@@ -28,8 +30,21 @@ public class Player : MonoBehaviour {
         }
     }
 
+    public void PickApple(GameObject pickedApple)
+    {
+        pickIndex += 1;
+        audioPlayer.PlayPickSound();
+
+        if (pickIndex >= Random.Range(3, 6))
+        {
+            CatchApple(pickedApple);
+            pickIndex = 0;
+        }
+    }
+
     public void CatchApple(GameObject catchedApple)
     {
+        audioPlayer.PlayCatchSound();
         targetPooler.ReturnPool(catchedApple);
         dropableApplePooler.ReturnPool(catchedApple);
 

@@ -5,6 +5,7 @@ using UnityEngine;
 public class AudioPlayer : MonoBehaviour {
    
     public AudioClip catchSound;
+    public AudioClip pickSound;
 
     private AudioSource audioSource;
 
@@ -13,8 +14,13 @@ public class AudioPlayer : MonoBehaviour {
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void PlayAudio()
+    public void PlayCatchSound()
     {
         audioSource.PlayOneShot(catchSound);
+    }
+
+    public void PlayPickSound()
+    {
+        audioSource.PlayOneShot(pickSound);
     }
 }
