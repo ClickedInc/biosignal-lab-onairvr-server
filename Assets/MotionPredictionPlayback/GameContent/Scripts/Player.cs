@@ -6,13 +6,18 @@ public class Player : MonoBehaviour {
 
     [SerializeField] private AudioPlayer audioPlayer;
     [SerializeField] private GameObject dropableApple;
-    [SerializeField] private GameObject head;
 
+    private AirVRStereoCameraRig cameraRig;
     private bool isCatched;
     private GameObject currentDropedApple;
     private ObjectPooler dropableApplePooler;
     private ObjectPooler targetPooler;
     private int pickIndex;
+
+    private void Awake() 
+    {
+        cameraRig = transform.Find("AirVRCameraRig").GetComponent<AirVRStereoCameraRig>();    
+    }
 
     private void Start()
     {
@@ -25,8 +30,18 @@ public class Player : MonoBehaviour {
     private void LateUpdate () {
         if (isCatched)
         {
-            currentDropedApple.transform.position = head.transform.forward * 5;
-            currentDropedApple.transform.LookAt(head.transform.position);
+            var position = cameraRig.centerEyeAnchor.position;
+            var forward = cameraRig.centerEyeAnchor.forward;
+
+            if (AirVRInput.IsDeviceFeedbackEnabled(cameraRig, AirVRInput.Device.TrackedController)) {
+                var rot = Quaternion.identity;
+                AirVRInput.GetTrackedDevicePositionAndOrientation(cameraRig, AirVRInput.Device.TrackedController, out position, out rot);
+
+                forward = rot * Vector3.forward;
+            }
+
+            currentDropedApple.transform.position = forward * 5;
+            currentDropedApple.transform.LookAt(position);
         }
     }
 
