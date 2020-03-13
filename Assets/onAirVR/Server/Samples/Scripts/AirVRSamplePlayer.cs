@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -9,8 +9,6 @@
 
 using UnityEngine;
 
-[RequireComponent(typeof(CharacterController))]
-
 public class AirVRSamplePlayer : MonoBehaviour {
     private const float ThrowSpeed = 12.0f;
     private const float ThrowTorqueSpeed = 20.0f;
@@ -18,8 +16,9 @@ public class AirVRSamplePlayer : MonoBehaviour {
     private Transform _thisTransform;
     private CharacterController _thisCharacterController;
     private AirVRStereoCameraRig _cameraRig;
-    private Transform _headLocator;
     private float _fallingSpeed;
+    private GameObject _leftHand;
+    private GameObject _rightHand;
     private AudioSource _soundShot;
 
     public AirVRSampleCan canPrefab;
@@ -39,27 +38,13 @@ public class AirVRSamplePlayer : MonoBehaviour {
 		}
 	}
 
-    private bool isCameraRigAvailable {
-        get {
-            return _cameraRig != null && _cameraRig.gameObject.activeSelf;
-        }
-    }
-
     private Vector3 inputDirection {
         get {
-            if (isCameraRigAvailable == false) {
-                return Vector2.zero;
-            }
-
             Vector2 result = Vector2.zero;
-            if (AirVRInput.Get(_cameraRig, AirVRInput.Touchpad.Button.Touch)) {
-                result += translateTouchPositionToMoveDirection(AirVRInput.Get(_cameraRig, AirVRInput.Touchpad.Axis2D.Position) * 5.0f);
+            if (AirVRInput.Get(_cameraRig, AirVRInput.Touchable.Touchpad)) {
+                result += translateTouchPositionToMoveDirection(AirVRInput.Get(_cameraRig, AirVRInput.Axis2D.Touchpad) * 5.0f);
             }
-            if (AirVRInput.Get(_cameraRig, AirVRInput.TrackedController.Button.TouchpadClick)) {
-                result += translateTouchPositionToMoveDirection(AirVRInput.Get(_cameraRig, AirVRInput.TrackedController.Axis2D.TouchpadPosition));
-            }
-            result += AirVRInput.Get(_cameraRig, AirVRInput.Gamepad.Axis2D.LThumbstick);
-
+            result += AirVRInput.Get(_cameraRig, AirVRInput.Axis2D.LThumbstick);
             return new Vector3(Mathf.Clamp(result.x, -1.0f, 1.0f), 0.0f, Mathf.Clamp(result.y, -1.0f, 1.0f));
         }
     }
@@ -77,7 +62,7 @@ public class AirVRSamplePlayer : MonoBehaviour {
     }
 
     private void processMovement() {
-        if (_thisCharacterController.enabled) {
+        if (_thisCharacterController != null && _thisCharacterController.enabled) {
             Vector3 moveDirection = inputDirection;
             if (moveDirection.sqrMagnitude > 1.0f) {
                 moveDirection = moveDirection.normalized;
@@ -87,27 +72,25 @@ public class AirVRSamplePlayer : MonoBehaviour {
             Vector3 horizontalDir = new Vector3(velocity.x, 0.0f, velocity.z).normalized;
 
             Vector3 movingDir = velocity.magnitude * horizontalDir * Time.deltaTime;
-
             if (_fallingSpeed > 0.0f) {
                 _thisCharacterController.Move(movingDir + Mathf.Max(_fallingSpeed * Time.deltaTime, movingDir.magnitude / Mathf.Tan(_thisCharacterController.slopeLimit)) * Vector3.down);
             }
             else {
                 _thisCharacterController.Move(movingDir);
             }
-
             updateFalling(Time.deltaTime);
         }
     }
 
     private void processInput() {
-        if (AirVRInput.GetDown(_cameraRig, AirVRInput.Touchpad.Button.Touch) ||
-            AirVRInput.GetDown(_cameraRig, AirVRInput.Gamepad.Button.A) ||
-            AirVRInput.GetDown(_cameraRig, AirVRInput.TrackedController.Button.IndexTrigger)) {
+        if (AirVRInput.GetDown(_cameraRig, AirVRInput.Button.A) || 
+            AirVRInput.GetDown(_cameraRig, AirVRInput.Button.LIndexTrigger) || 
+            AirVRInput.GetDown(_cameraRig, AirVRInput.Button.RIndexTrigger)) {
             throwCan();
         }
     }
 
-    private void throwCan() {
+    public void throwCan() {
         Vector3 forward = _cameraRig.centerEyeAnchor.forward;
 
         AirVRSampleCan can = Instantiate(canPrefab, transform.position, _cameraRig.centerEyeAnchor.rotation) as AirVRSampleCan;
@@ -119,18 +102,11 @@ public class AirVRSamplePlayer : MonoBehaviour {
     void Awake() {
         _thisTransform = transform;
         _thisCharacterController = GetComponent<CharacterController>();
-        _cameraRig = GetComponentInChildren<AirVRStereoCameraRig>(true);
-        _headLocator = transform.Find("Body/HeadLocator");
+        _cameraRig = GetComponentInChildren<AirVRStereoCameraRig>();
         _soundShot = transform.Find("SoundShot").GetComponent<AudioSource>();
     }
 
     void Update() {
-        if (isCameraRigAvailable == false) {
-            return;
-        }
-
-        _headLocator.rotation = _cameraRig.centerEyeAnchor.rotation;
-
         processMovement();
         processInput();
     }
@@ -141,6 +117,10 @@ public class AirVRSamplePlayer : MonoBehaviour {
     }
 
     public void EnableInteraction(bool enable) {
+        if (_thisCharacterController == null) {
+            return;
+        }
+
         _thisCharacterController.enabled = enable;
 
         if (enable == false) {

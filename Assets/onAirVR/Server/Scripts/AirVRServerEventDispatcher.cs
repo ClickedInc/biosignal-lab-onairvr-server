@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -17,9 +17,6 @@ public class AirVRServerEventDispatcher : AirVREventDispatcher {
 
     [DllImport(AirVRServerPlugin.Name)]
     private static extern void onairvr_RemoveFirstMessage();
-
-    [DllImport(AirVRServerPlugin.Name)]
-    private static extern void RemoveFirstMessageFromQueue();
 
     protected override AirVRMessage ParseMessageImpl(IntPtr source, string message) {
         return AirVRServerMessage.Parse(source, message);

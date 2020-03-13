@@ -20,20 +20,17 @@ public class InputManager : MonoBehaviour
             return;
         }
 
-        if(AirVRInput.GetDown(rig , AirVRInput.TrackedController.Button.Back) ||
-            AirVRInput.GetDown(rig, AirVRInput.Touchpad.Button.Back))
-        {
+        if (AirVRInput.GetDown(rig, AirVRInput.Button.Y)) {
             rig.Disconnect();
             return;
         }
-        if (AirVRInput.GetDown(rig, AirVRInput.Touchpad.Button.Touch)
-            || AirVRInput.GetDown(rig, AirVRInput.TrackedController.Button.TouchpadClick))
-        {
+
+        if (AirVRInput.GetDown(rig, AirVRInput.Button.RIndexTrigger) ||
+            AirVRInput.GetDown(rig, AirVRInput.Button.A)) {
             if (ui.IsOnPointer())
                 return;
 
-            if (ui.IsFadeOut() || !ui.IsActiveCanvas())
-            {
+            if (ui.IsFadeOut() || !ui.IsActiveCanvas()) {
                 ui.PopUp();
                 return;
             }

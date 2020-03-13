@@ -17,17 +17,7 @@ public class RayEventHandler : MonoBehaviour {
     {
         RaycastHit hit = new RaycastHit();
 
-        var position = cameraRig.centerEyeAnchor.position;
-        var forward = cameraRig.centerEyeAnchor.forward;
-
-        if (AirVRInput.IsDeviceFeedbackEnabled(cameraRig, AirVRInput.Device.TrackedController)) {
-            var rot = Quaternion.identity;
-            AirVRInput.GetTrackedDevicePositionAndOrientation(cameraRig, AirVRInput.Device.TrackedController, out position, out rot);
-
-            forward = rot * Vector3.forward;
-        }
-
-        Ray ray = new Ray(position, forward);
+        Ray ray = new Ray(cameraRig.rightHandAnchor.position, cameraRig.rightHandAnchor.forward);
         Debug.DrawLine(ray.origin, ray.direction * 500, Color.red);
 
         if (Physics.Raycast(ray, out hit, Mathf.Infinity))

@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -9,62 +9,70 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Networking;
 
-public abstract class AirVRPointer : MonoBehaviour {
+public class AirVRPointer : MonoBehaviour {
     public static List<AirVRPointer> pointers = new List<AirVRPointer>();
 
-    private Texture2D _cookie;
+    private AirVRStereoCameraRig _cameraRig = null;
+    private AirVRInput.Device _inputDevice = AirVRInput.Device.Unknown;
 
-    [SerializeField] private AirVRCameraRig _cameraRig;
-    [SerializeField] private string _cookieTextureFilename;
-    [SerializeField] private float _depthScaleMultiplier;
-
-    protected float depthScaleMultiplier {
-        get {
-            return _depthScaleMultiplier;
-        }
-    }
+    [SerializeField] private bool _renderOnClient = false;
+    [SerializeField] private Texture2D _cookie;
+    [SerializeField] private float _depthScaleMultiplier = 0.015f;
 
     private void Awake() {
         pointers.Add(this);
-    }
 
-    private IEnumerator Start() {
-        if (string.IsNullOrEmpty(_cookieTextureFilename) == false) {
-            WWW www = new WWW("file://" + System.IO.Path.Combine(Application.streamingAssetsPath, _cookieTextureFilename));
-            yield return www;
+        var grandparent = transform.parent ? transform.parent.parent : null;
+        _cameraRig = grandparent ? grandparent.GetComponent<AirVRStereoCameraRig>() : null;
 
-            if (string.IsNullOrEmpty(www.error)) {
-                _cookie = www.texture;
-            }
+        if (_cameraRig == null) { return; }
+
+        if (gameObject.name == "LeftHandAnchor") {
+            _inputDevice = AirVRInput.Device.LeftHandTracker;
+        }
+        else if (gameObject.name == "RightHandAnchor") {
+            _inputDevice = AirVRInput.Device.RightHandTracker;
+        }
+        else {
+            throw new UnityException("[ERROR] AirVRPointer must be attached LeftHandAnchor or RightHandAnchor of AirVRStereoCameraRig");
         }
     }
 
+    //private IEnumerator Start() {
+    //    if (string.IsNullOrEmpty(_cookieTextureFilename) == false) {
+    //        var request = UnityWebRequestTexture.GetTexture("file://" + System.IO.Path.Combine(Application.streamingAssetsPath, _cookieTextureFilename));
+    //        yield return request.SendWebRequest();
+
+    //        if (!request.isNetworkError && !request.isHttpError) {
+    //            _cookie = (request.downloadHandler as DownloadHandlerTexture).texture;
+    //        }
+    //    }
+    //}
+
     protected virtual void Update() {
-        if (AirVRInput.IsDeviceAvailable(_cameraRig, device) && AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, device) == false && cookie != null) {
-            AirVRInput.EnableTrackedDeviceFeedback(_cameraRig, device, cookie, depthScaleMultiplier);
+        if (_renderOnClient == false) { return; }
+
+        if (AirVRInput.IsDeviceAvailable(_cameraRig, _inputDevice) && AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, _inputDevice) == false && _cookie != null) {
+            AirVRInput.EnableTrackedDeviceFeedback(_cameraRig, _inputDevice, _cookie, _depthScaleMultiplier);
         }
     }
 
     private void OnDisable() {
-        if (interactable) {
-            AirVRInput.DisableDeviceFeedback(_cameraRig, device);
+        if (_renderOnClient == false) { return; }
+
+        if (AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, _inputDevice)) {
+            AirVRInput.DisableDeviceFeedback(_cameraRig, _inputDevice);
         }
     }
 
     private void OnDestroy() {
         pointers.Remove(this);
     }
-
-    protected Texture2D cookie {
-        get {
-            return _cookie;
-        }
-    }
-
-    protected abstract AirVRInput.Device device { get; }
 
     public AirVRCameraRig cameraRig {
         get {
@@ -74,32 +82,64 @@ public abstract class AirVRPointer : MonoBehaviour {
 
     public bool interactable {
         get {
-            return _cameraRig != null && _cameraRig.gameObject.activeSelf && AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, device);
+            if (_renderOnClient == false) { return true; }
+
+            return AirVRInput.IsDeviceFeedbackEnabled(_cameraRig, _inputDevice);
         }
     }
 
-    public abstract bool primaryButtonPressed { get; }
-    public abstract bool primaryButtonReleased { get; }
+    public bool primaryButtonPressed {
+        get {
+            if (_cameraRig == null) { return false; }
+
+            switch (_inputDevice) {
+                case AirVRInput.Device.LeftHandTracker:
+                    return AirVRInput.GetDown(_cameraRig, AirVRInput.Button.LIndexTrigger) ||
+                           AirVRInput.GetDown(_cameraRig, AirVRInput.Button.X);
+                case AirVRInput.Device.RightHandTracker:
+                    return AirVRInput.GetDown(_cameraRig, AirVRInput.Button.RIndexTrigger) ||
+                           AirVRInput.GetDown(_cameraRig, AirVRInput.Button.A);
+                default:
+                    return false;
+            }
+        }
+    }
+
+    public bool primaryButtonReleased {
+        get {
+            if (_cameraRig == null) { return false; }
+
+            switch (_inputDevice) {
+                case AirVRInput.Device.LeftHandTracker:
+                    return AirVRInput.GetUp(_cameraRig, AirVRInput.Button.LIndexTrigger) ||
+                           AirVRInput.GetUp(_cameraRig, AirVRInput.Button.X);
+                case AirVRInput.Device.RightHandTracker:
+                    return AirVRInput.GetUp(_cameraRig, AirVRInput.Button.RIndexTrigger) ||
+                           AirVRInput.GetUp(_cameraRig, AirVRInput.Button.A);
+                default:
+                    return false;
+            }
+        }
+    }
 
     public Ray GetWorldRay() {
-        switch (device) {
-            case AirVRInput.Device.HeadTracker:
-                return new Ray(_cameraRig.headPose.position, _cameraRig.headPose.forward);
-            case AirVRInput.Device.TrackedController:
-                Vector3 position = Vector3.zero;
-                Quaternion orientation = Quaternion.identity;
-                AirVRInput.GetTrackedDevicePositionAndOrientation(_cameraRig, AirVRInput.Device.TrackedController, out position, out orientation);
-                return new Ray(position, orientation * Vector3.forward);
+        switch (_inputDevice) {
+            case AirVRInput.Device.LeftHandTracker:
+                return new Ray(_cameraRig.leftHandAnchor.position, _cameraRig.leftHandAnchor.forward);
+            case AirVRInput.Device.RightHandTracker:
+                return new Ray(_cameraRig.rightHandAnchor.position, _cameraRig.rightHandAnchor.forward);
         }
         return new Ray();
     }
 
     public void UpdateRaycastResult(Ray ray, RaycastResult raycastResult) {
+        if (_renderOnClient == false) { return; }
+
         if (raycastResult.isValid) {
-            AirVRInput.FeedbackTrackedDevice(_cameraRig, device, ray.origin, raycastResult.worldPosition, raycastResult.worldNormal);
+            AirVRInput.FeedbackTrackedDevice(_cameraRig, _inputDevice, ray.origin, raycastResult.worldPosition, raycastResult.worldNormal);
         }
         else {
-            AirVRInput.FeedbackTrackedDevice(_cameraRig, device, Vector3.zero, Vector3.zero, Vector3.zero);
+            AirVRInput.FeedbackTrackedDevice(_cameraRig, _inputDevice, Vector3.zero, Vector3.zero, Vector3.zero);
         }
     }
 }

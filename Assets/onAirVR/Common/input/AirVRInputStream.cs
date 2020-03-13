@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -26,7 +26,7 @@ public abstract class AirVRInputBase {
         }
     }
 
-    public virtual void OnRegistered(byte inDeviceID, string arguments = "") {
+    public virtual void OnRegistered(byte inDeviceID, string options = "") {
         deviceID = inDeviceID;
     }
 
@@ -71,8 +71,10 @@ public abstract class AirVRInputStream {
         }
     }
 
-    protected abstract float sendingRatePerSec { get; }
+    protected abstract float maxSendingRatePerSec { get; }
     protected abstract void UnregisterInputSenderImpl(byte id);
+
+    protected abstract void BeginPendInputImpl(ref long timestamp);
 
     protected abstract void PendInputTouchImpl(byte deviceID, byte controlID, Vector2 position, float touch, byte policy);
     protected abstract void PendInputTransformImpl(byte deviceID, byte controlID, Vector3 position, Quaternion orientation, byte policy);
@@ -83,7 +85,6 @@ public abstract class AirVRInputStream {
     protected abstract void PendInputFloat2Impl(byte deviceID, byte controlID, Vector2 value, byte policy);
     protected abstract void PendInputFloatImpl(byte deviceID, byte controlID, float value, byte policy);
 
-    protected abstract bool GetInputTouchImpl(byte deviceID, byte controlID, ref Vector2 position, ref float touch);
     protected abstract bool GetInputTransformImpl(byte deviceID, byte controlID, ref long timeStamp, ref Vector3 position, ref Quaternion orientation);
     protected abstract bool GetTrackedDeviceFeedbackImpl(byte deviceID, byte controlID, 
                                                          ref Vector3 worldRayOrigin, ref Vector3 worldHitPosition, ref Vector3 worldHitNormal);
@@ -91,12 +92,13 @@ public abstract class AirVRInputStream {
     protected abstract bool GetInputFloat3Impl(byte deviceID, byte controlID, ref Vector3 value);
     protected abstract bool GetInputFloat2Impl(byte deviceID, byte controlID, ref Vector2 value);
     protected abstract bool GetInputFloatImpl(byte deviceID, byte controlID, ref float value);
-    protected abstract void SendPendingInputEventsImpl();
+
+    protected abstract void SendPendingInputEventsImpl(long timestamp);
     protected abstract void ResetInputImpl();
 
 
     public virtual void Init() {
-        _timer.Set(sendingRatePerSec);
+        _timer.Set(maxSendingRatePerSec);
     }
 
     public virtual void Start() {
@@ -125,9 +127,9 @@ public abstract class AirVRInputStream {
         }
     }
 
-    public void HandleRemoteInputDeviceRegistered(string deviceName, byte deviceID, string arguments) {
+    public void HandleRemoteInputDeviceRegistered(string deviceName, byte deviceID, string options) {
         if (receivers.ContainsKey(deviceName) && receivers[deviceName].isRegistered == false) {
-            receivers[deviceName].OnRegistered(deviceID, arguments);
+            receivers[deviceName].OnRegistered(deviceID, options);
         }
     }
 
@@ -145,19 +147,18 @@ public abstract class AirVRInputStream {
         PendInputTouchImpl((byte)sender.deviceID, controlID, position, touch ? 1.0f : 0.0f, (byte)SendingPolicy.NonzeroAlwaysZeroOnce);
     }
 
-    public void GetTouch(AirVRInputReceiver receiver, byte controlID, out Vector2 position, out bool touch) {
-        Vector2 resultPosition = Vector2.zero;
-        float resultTouch = 0.0f;
-
+    public void GetTouch(AirVRInputReceiver receiver, byte controlID, out Vector2 position, out float touch) {
         if (receiver.isRegistered) {
-            if (GetInputTouchImpl((byte)receiver.deviceID, controlID, ref resultPosition, ref resultTouch) == false) {
-                resultPosition = Vector2.zero;
-                resultTouch = 0.0f;
+            var value = Vector3.zero;
+            if (GetInputFloat3Impl((byte)receiver.deviceID, controlID, ref value)) {
+                position = new Vector2(value.x, value.y);
+                touch = value.z;
+                return;
             }
         }
 
-        position = resultPosition;
-        touch = resultTouch != 0.0f;
+        position = Vector2.zero;
+        touch = 0.0f;
     }
 
     public void PendQuaternion(AirVRInputSender sender, byte controlID, Quaternion value) {
@@ -303,10 +304,13 @@ public abstract class AirVRInputStream {
             _timer.UpdatePerFrame();
 
             if (_timer.expired) {
+                long timestamp = 0;
+                BeginPendInputImpl(ref timestamp);
+
                 foreach (var key in senders.Keys) {
                     senders[key].PendInputsPerFrame(this);
                 }
-                SendPendingInputEventsImpl();
+                SendPendingInputEventsImpl(timestamp);
             }
         }
     }

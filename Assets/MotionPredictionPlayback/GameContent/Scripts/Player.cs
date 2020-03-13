@@ -30,18 +30,8 @@ public class Player : MonoBehaviour {
     private void LateUpdate () {
         if (isCatched)
         {
-            var position = cameraRig.centerEyeAnchor.position;
-            var forward = cameraRig.centerEyeAnchor.forward;
-
-            if (AirVRInput.IsDeviceFeedbackEnabled(cameraRig, AirVRInput.Device.TrackedController)) {
-                var rot = Quaternion.identity;
-                AirVRInput.GetTrackedDevicePositionAndOrientation(cameraRig, AirVRInput.Device.TrackedController, out position, out rot);
-
-                forward = rot * Vector3.forward;
-            }
-
-            currentDropedApple.transform.position = forward * 5;
-            currentDropedApple.transform.LookAt(position);
+            currentDropedApple.transform.position = cameraRig.rightHandAnchor.position + cameraRig.rightHandAnchor.forward * 1.0f;
+            currentDropedApple.transform.LookAt(cameraRig.rightHandAnchor.position);
         }
     }
 

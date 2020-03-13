@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -27,6 +27,7 @@ public class AirVRCameraRigManager : MonoBehaviour {
         void AirVRCameraRigActivated(AirVRCameraRig cameraRig);
         void AirVRCameraRigDeactivated(AirVRCameraRig cameraRig);
         void AirVRCameraRigHasBeenUnbound(AirVRCameraRig cameraRig);
+        void AirVRCameraRigUserDataReceived(AirVRCameraRig cameraRig, byte[] userData);
     }
 
     private static AirVRCameraRigManager _instanceOnCurrentScene;
@@ -89,10 +90,6 @@ public class AirVRCameraRigManager : MonoBehaviour {
     }
 
     private void updateApplicationTargetFrameRate() {
-        if (AirVRServer.isInstantiated == false) {
-            return;
-        }
-
         List<AirVRCameraRig> cameraRigs = new List<AirVRCameraRig>();
         _cameraRigList.GetAllRetainedCameraRigs(cameraRigs);
 
@@ -210,6 +207,12 @@ public class AirVRCameraRigManager : MonoBehaviour {
             else if (serverMessage.Name.Equals(AirVRServerMessage.NameDisconnected)) {
                 onAirVRSessionDisconnected(playerID, serverMessage);
             }
+            else if (serverMessage.Name.Equals(AirVRServerMessage.NameProfilerFrame)) {
+                onAirVRProfilerFrameReceived(playerID, serverMessage);
+            }
+            else if (serverMessage.Name.Equals(AirVRServerMessage.NameProfilerReport)) {
+                onAirVRProfilerReportReceived(playerID, serverMessage);
+            }
         }
         else if (serverMessage.IsPlayerEvent()) {
             if (serverMessage.Name.Equals(AirVRServerMessage.NameCreated)) {
@@ -236,6 +239,9 @@ public class AirVRCameraRigManager : MonoBehaviour {
             else if (serverMessage.Name.Equals(AirVRServerMessage.NameProfileCBOR)) {
                 onAirVRPlayerProfileCBOR(playerID, serverMessage);
             }
+        }
+        else if (message.Type.Equals(AirVRMessage.TypeUserData)) {
+            onAirVRPlayerUserDataReceived(playerID, serverMessage);
         }
     }
 
@@ -306,8 +312,25 @@ public class AirVRCameraRigManager : MonoBehaviour {
         AirVRServer.NotifyProfileDataReceived(playerID, message.Data_Decoded);
     }
 
+    private void onAirVRPlayerUserDataReceived(int playerID, AirVRServerMessage message) {
+        AirVRCameraRig cameraRig = _cameraRigList.GetBoundCameraRig(playerID);
+        if (cameraRig != null && Delegate != null) {
+            Delegate.AirVRCameraRigUserDataReceived(cameraRig, message.Data_Decoded);
+        }
+    }
+
     private void onAirVRSessionDisconnected(int playerID, AirVRServerMessage message) {
-        AirVRServer.NotifyProfilerDisabled(playerID);
         AirVRServer.NotifyClientDisconnected(playerID);
+    }
+
+    private void onAirVRProfilerFrameReceived(int playerID, AirVRServerMessage message) {
+        //Debug.Log(string.Format("profiler frame: latency: overall {0:0.000} = network {1:0.000} + decode {2:0.000}",
+        //                        message.OverallLatency, message.NetworkLatency, message.DecodeLatency));
+    }
+
+    private void onAirVRProfilerReportReceived(int playerID, AirVRServerMessage message) {
+        Debug.Log(string.Format("profiler report: fps {0:0.0} ({1}/{2:0.000}), avg latency: overall {3:0.000} = network {4:0.000} + decode {5:0.000}",
+                                message.FrameCount / message.Duration, message.FrameCount, message.Duration,
+                                message.AvgOverallLatency, message.AvgNetworkLatency, message.AvgDecodeLatency));
     }
 }

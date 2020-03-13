@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -16,8 +16,9 @@ public class AirVRSampleSimpleScene : MonoBehaviour, AirVRCameraRigManager.Event
     private const string PointerSampleSceneName = "B. Event System (experimental)";
 
     private bool _sceneBeingUnloaded;
+    private AirVRStereoCameraRig _stereoRig;
+    private AirVRMonoCameraRig _monoRig;
 
-    public AirVRCameraRig cameraRig;
     public AudioSource music;
 
     private IEnumerator loadScene(string sceneName) {
@@ -26,6 +27,9 @@ public class AirVRSampleSimpleScene : MonoBehaviour, AirVRCameraRigManager.Event
     }
 
     void Awake() {
+        _stereoRig = FindObjectOfType<AirVRStereoCameraRig>();
+        _monoRig = FindObjectOfType<AirVRMonoCameraRig>();
+
         AirVRCameraRigManager.managerOnCurrentScene.Delegate = this;
     }
 
@@ -34,13 +38,20 @@ public class AirVRSampleSimpleScene : MonoBehaviour, AirVRCameraRigManager.Event
     }
 
     void Update() {
-        if (cameraRig.gameObject.activeSelf == false) {
-            return;
-        }
-
-        if (_sceneBeingUnloaded == false && AirVRInput.GetDown(cameraRig, AirVRInput.Touchpad.Button.Back)) {
+        if (_sceneBeingUnloaded == false && AirVRInput.GetDown(_stereoRig, AirVRInput.Button.Back)) {
             _sceneBeingUnloaded = true;
             StartCoroutine(loadScene(PointerSampleSceneName));
+        }
+
+        var touchCount = AirVRInput.GetScreenTouchCount(_monoRig);
+        if (touchCount > 0) {
+            var trace = " ";
+            for (var index = 0; index < touchCount; index++) {
+                var touch = AirVRInput.GetScreenTouch(_monoRig, index);
+                trace += string.Format("[id: {0}, phase: {1}, x: {2}, y: {3}] ", touch.fingerID, touch.phase, touch.position.x, touch.position.y);
+            }
+
+            Debug.Log(trace);
         }
     }
 
@@ -50,13 +61,18 @@ public class AirVRSampleSimpleScene : MonoBehaviour, AirVRCameraRigManager.Event
 
         if (selected) {
             AirVRSamplePlayer player = selected.GetComponentInParent<AirVRSamplePlayer>();
-            player.EnableInteraction(true);
-
+            if (player != null) {
+                player.EnableInteraction(true);
+            }
             music.Play();
         }
     }
 
-    public void AirVRCameraRigActivated(AirVRCameraRig cameraRig) {}
+    public void AirVRCameraRigActivated(AirVRCameraRig cameraRig) {
+        string pingMessage = "ping on camera rig activated, from " + System.Environment.MachineName;
+        cameraRig.SendUserData(System.Text.Encoding.UTF8.GetBytes(pingMessage));
+    }
+
     public void AirVRCameraRigDeactivated(AirVRCameraRig cameraRig) {}
 
     public void AirVRCameraRigHasBeenUnbound(AirVRCameraRig cameraRig) {
@@ -69,5 +85,9 @@ public class AirVRSampleSimpleScene : MonoBehaviour, AirVRCameraRigManager.Event
         if (music != null) {
             music.Stop();
         }
+    }
+
+    public void AirVRCameraRigUserDataReceived(AirVRCameraRig cameraRig, byte[] userData) {
+        Debug.Log("User data received: " + System.Text.Encoding.UTF8.GetString(userData));
     }
 }

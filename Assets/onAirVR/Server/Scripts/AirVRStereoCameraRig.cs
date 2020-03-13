@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -15,6 +15,8 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     private readonly string LeftEyeAnchorName = "LeftEyeAnchor";
     private readonly string RightEyeAnchorName = "RightEyeAnchor";
     private readonly string CenterEyeAnchorName = "CenterEyeAnchor";
+    private readonly string LeftHandAnchorName = "LeftHandAnchor";
+    private readonly string RightHandAnchorName = "RightHandAnchor";
     private readonly int CameraLeftIndex = 0;
     private readonly int CameraRightIndex = 1;
 
@@ -26,20 +28,11 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     }
 
     private Matrix4x4 _worldToHMDSpaceMatrix;
-    private Transform _trackingSpace;
-    private Transform _leftEyeAnchor;
-    private Transform _centerEyeAnchor;
-    private Transform _rightEyeAnchor;
-
     private Camera[] _cameras;
-
     private AirVRTrackingModel _trackingModelObject;
+    private AirVRPredictedMotionProvider _predictedMotionProvider;
 
-    internal Transform trackingSpace {
-        get {
-            return _trackingSpace;
-        }
-    }
+    internal Transform trackingSpace { get; private set; }
 
     public Camera leftEyeCamera {
         get {
@@ -53,23 +46,11 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
         }
     }
 
-    public Transform leftEyeAnchor {
-        get {
-            return _leftEyeAnchor;
-        }
-    }
-
-    public Transform centerEyeAnchor {
-        get {
-            return _centerEyeAnchor;
-        }
-    }
-
-    public Transform rightEyeAnchor {
-        get {
-            return _rightEyeAnchor;
-        }
-    }
+    public Transform leftEyeAnchor { get; private set; }
+    public Transform centerEyeAnchor { get; private set; }
+    public Transform rightEyeAnchor { get; private set; }
+    public Transform leftHandAnchor { get; private set; }
+    public Transform rightHandAnchor { get; private set; }
 
     public TrackingModel trackingModel;
     public Transform externalTrackingOrigin;
@@ -110,17 +91,23 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     }
 
     protected override void ensureGameObjectIntegrity() {
-        if (_trackingSpace == null) {
-            _trackingSpace = getOrCreateGameObject(TrackingSpaceName, transform);
+        if (trackingSpace == null) {
+            trackingSpace = getOrCreateGameObject(TrackingSpaceName, transform);
         }
-        if (_leftEyeAnchor == null) {
-            _leftEyeAnchor = getOrCreateGameObject(LeftEyeAnchorName, _trackingSpace);
+        if (leftEyeAnchor == null) {
+            leftEyeAnchor = getOrCreateGameObject(LeftEyeAnchorName, trackingSpace);
         }
-        if (_centerEyeAnchor == null) {
-            _centerEyeAnchor = getOrCreateGameObject(CenterEyeAnchorName, _trackingSpace);
+        if (centerEyeAnchor == null) {
+            centerEyeAnchor = getOrCreateGameObject(CenterEyeAnchorName, trackingSpace);
         }
-        if (_rightEyeAnchor == null) {
-            _rightEyeAnchor = getOrCreateGameObject(RightEyeAnchorName, _trackingSpace);
+        if (rightEyeAnchor == null) {
+            rightEyeAnchor = getOrCreateGameObject(RightEyeAnchorName, trackingSpace);
+        }
+        if (leftHandAnchor == null) {
+            leftHandAnchor = getOrCreateGameObject(LeftHandAnchorName, trackingSpace);
+        }
+        if (rightHandAnchor == null) {
+            rightHandAnchor = getOrCreateGameObject(RightHandAnchorName, trackingSpace);
         }
 
         bool updateCamera = false;
@@ -129,18 +116,31 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
             updateCamera = true;
         }
 
-        if (ensureCameraObjectIntegrity(_leftEyeAnchor) == false || updateCamera) {
-            _cameras[CameraLeftIndex] = _leftEyeAnchor.GetComponent<Camera>();
+        if (ensureCameraObjectIntegrity(leftEyeAnchor) == false || updateCamera) {
+            _cameras[CameraLeftIndex] = leftEyeAnchor.GetComponent<Camera>();
         }
-        if (ensureCameraObjectIntegrity(_rightEyeAnchor) == false || updateCamera) {
-            _cameras[CameraRightIndex] = _rightEyeAnchor.GetComponent<Camera>();
+        if (ensureCameraObjectIntegrity(rightEyeAnchor) == false || updateCamera) {
+            _cameras[CameraRightIndex] = rightEyeAnchor.GetComponent<Camera>();
         }
     }
 
     protected override void init() {
+        _predictedMotionProvider = new AirVRPredictedMotionProvider();
+
+        inputStream.AddInputDevice(new AirVRHeadTrackerInputDevice(_predictedMotionProvider));
+        inputStream.AddInputDevice(new AirVRLeftHandTrackerInputDevice());
+        inputStream.AddInputDevice(new AirVRRightHandTrackerInputDevice(_predictedMotionProvider));
+        inputStream.AddInputDevice(new AirVRControllerInputDevice());
+
         if (_trackingModelObject == null) {
             _trackingModelObject = createTrackingModelObject(trackingModel);
         }
+    }
+
+    internal override void OnUpdate() {
+        _predictedMotionProvider.Update();
+
+        base.OnUpdate();
     }
 
     protected override void setupCamerasOnBound(AirVRClientConfig config) {
@@ -158,16 +158,16 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
         _trackingModelObject.StopTracking();
     }
 
-    protected override void updateCameraTransforms(AirVRClientConfig config, 
-                                                   Vector3 centerEyePosition, 
-                                                   Quaternion centerEyeOrientation) {
-        updateTrackingModel();
-        _trackingModelObject.UpdateEyePose(config, centerEyePosition, centerEyeOrientation);
+    protected override void updateCameraProjection(AirVRClientConfig config, float[] projection) {
+        // do nothing; a stereoscopic camera must keep its appropriate projection
     }
 
-    protected override void updateCameraProjection(Rect renderProjection, Rect encodingProjection) {
-        leftEyeCamera.projectionMatrix = AirVRClientConfig.MakeProjection(renderProjection, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
-        rightEyeCamera.projectionMatrix = AirVRClientConfig.MakeProjection(renderProjection, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
+    protected override void updateCameraProjection(AirVRClientConfig config, Rect renderProjection, Rect encodingProjection) {
+        float[] renderProj = { renderProjection.xMin, renderProjection.yMax, renderProjection.xMax, renderProjection.yMin };
+
+        leftEyeCamera.projectionMatrix = AirVRClientConfig.CalcCameraProjectionMatrix(renderProj, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
+        var rightProjMatrix = AirVRClientConfig.CalcCameraProjectionMatrix(renderProj, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
+        rightEyeCamera.projectionMatrix = AirVRClientConfig.FlipCameraProjectionMatrixHorizontally(rightProjMatrix);
 
         var viewport = new Rect((encodingProjection.width - renderProjection.width) / 2.0f / encodingProjection.width,
                                 (encodingProjection.height - renderProjection.height) / 2.0f / encodingProjection.height,
@@ -176,6 +176,30 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
 
         leftEyeCamera.rect = viewport;
         rightEyeCamera.rect = viewport;
+    }
+
+    protected override void updateCameraTransforms(AirVRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation) {
+        updateTrackingModel();
+        _trackingModelObject.UpdateEyePose(config, centerEyePosition, centerEyeOrientation);
+    }
+
+    protected override void updateCameraTransforms(AirVRClientConfig config, Vector3 leftEyePosition, Quaternion leftEyeOrientation, Vector3 rightEyePosition, Quaternion rightEyeOrientation) {
+        updateTrackingModel();
+        _trackingModelObject.UpdateEyePose(config, leftEyePosition, leftEyeOrientation, rightEyePosition, rightEyeOrientation);
+    }
+
+    protected override void updateControllerTransforms(AirVRClientConfig config) {
+        Vector3 position = Vector3.zero;
+        Quaternion orientation = Quaternion.identity;
+
+        if (inputStream.GetTransform(AirVRInputDeviceName.LeftHandTracker, (byte)AirVRLeftHandTrackerKey.Transform, ref position, ref orientation)) {
+            leftHandAnchor.localPosition = position;
+            leftHandAnchor.localRotation = orientation;
+        }
+        if (inputStream.GetTransform(AirVRInputDeviceName.RightHandTracker, (byte)AirVRRightHandTrackerKey.Transform, ref position, ref orientation)) {
+            rightHandAnchor.localPosition = position;
+            rightHandAnchor.localRotation = orientation;
+        }
     }
 
     internal override Matrix4x4 clientSpaceToWorldMatrix {

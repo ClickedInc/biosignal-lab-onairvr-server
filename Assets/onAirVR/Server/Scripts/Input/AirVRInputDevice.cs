@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -12,39 +12,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 
 public abstract class AirVRInputDevice : AirVRInputReceiver {
-    private abstract class Control {
-        public Axis4D AsAxis4D() {
-            return this as Axis4D;
-        }
-
-        public Axis3D AsAxis3D() {
-            return this as Axis3D;
-        }
-
-        public Axis2D AsAxis2D() {
-            return this as Axis2D;
-        }
-
-        public Axis AsAxis() {
-            return this as Axis;
-        }
-
-        public Button AsButton() {
-            return this as Button;
-        }
-
-        public Xform AsTransform() {
-            return this as Xform;
-        }
-
-        public Touch AsTouch() {
-            return this as Touch;
-        }
-
-        public Orientation AsOrientation() {
-            return this as Orientation;
-        }
-
+    public abstract class Control {
         public abstract void PollInput(AirVRInputDevice device, AirVRInputStream inputStream, byte id);
     }
 
@@ -153,27 +121,6 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
         }
     }
 
-    private class Touch : Control {
-        private Vector2 _position;
-        private bool _touch;
-
-        public Vector2 position {
-            get {
-                return _position;
-            }
-        }
-
-        public bool touch {
-            get {
-                return _touch;
-            }
-        }
-
-        public override void PollInput(AirVRInputDevice device, AirVRInputStream inputStream, byte id) {
-            inputStream.GetTouch(device, id, out _position, out _touch);
-        }
-    }
-
     public AirVRInputDevice() {
         _controls = new Dictionary<byte, Control>();
         _extControls = new Dictionary<byte, Control>();
@@ -186,17 +133,17 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
 
     private Control findControl(byte controlID) {
         return _controls.ContainsKey(controlID) ? _controls[controlID] :
-               _extControls.ContainsKey(controlID) ? _extControls[controlID] : 
+               _extControls.ContainsKey(controlID) ? _extControls[controlID] :
                                                      null;
     }
 
     protected abstract string deviceName { get; }
     protected abstract void MakeControlList();
 
-    protected virtual void UpdateExtendedControls() {}
+    protected virtual void UpdateExtendedControls() { }
 
     protected void AddControlTouch(byte controlID) {
-        _controls.Add(controlID, new Touch());
+        _controls.Add(controlID, new AirVRInput.Touch());
     }
 
     protected void AddControlTransform(byte controlID) {
@@ -223,6 +170,10 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
         _controls.Add(controlID, new Button());
     }
 
+    protected void AddExtControlTransform(byte controlID) {
+        _extControls.Add(controlID, new Xform());
+    }
+
     protected void AddExtControlAxis4D(byte controlID) {
         _extControls.Add(controlID, new Axis4D());
     }
@@ -230,7 +181,7 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
     protected void AddExtControlAxis3D(byte controlID) {
         _extControls.Add(controlID, new Axis3D());
     }
-
+    
     protected void AddExtControlAxis2D(byte controlID) {
         _extControls.Add(controlID, new Axis2D());
     }
@@ -245,41 +196,52 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
 
     protected void OverrideControlTransform(byte controlID, long timeStamp, Vector3 position, Quaternion orientation) {
         Assert.IsTrue(_controls.ContainsKey(controlID));
-        _controls[controlID].AsTransform().timeStamp = timeStamp;
-        _controls[controlID].AsTransform().position = position;
-        _controls[controlID].AsTransform().orientation = orientation;
+
+        var xform = _controls[controlID] as Xform;
+        xform.timeStamp = timeStamp;
+        xform.position = position;
+        xform.orientation = orientation;
+    }
+
+    protected void SetExtControlTransform(byte controlID, long timestamp, Vector3 position, Quaternion orientation) {
+        Assert.IsTrue(_extControls.ContainsKey(controlID));
+
+        var xform = _extControls[controlID] as Xform;
+        xform.timeStamp = timestamp;
+        xform.position = position;
+        xform.orientation = orientation;
     }
 
     protected void SetExtControlAxis4D(byte controlID, Vector4 value) {
         Assert.IsTrue(_extControls.ContainsKey(controlID));
-        _extControls[controlID].AsAxis4D().value = value;
+        (_extControls[controlID] as Axis4D).value = value;
     }
 
     protected void SetExtControlAxis3D(byte controlID, Vector3 value) {
         Assert.IsTrue(_extControls.ContainsKey(controlID));
-        _extControls[controlID].AsAxis3D().value = value;
+        (_extControls[controlID] as Axis3D).value = value;
     }
 
     protected void SetExtControlAxis2D(byte controlID, Vector2 value) {
         Assert.IsTrue(_extControls.ContainsKey(controlID));
-        _extControls[controlID].AsAxis2D().value = value;
+        (_extControls[controlID] as Axis2D).value = value;
     }
 
     protected void SetExtControlAxis(byte controlID, float value) {
         Assert.IsTrue(_extControls.ContainsKey(controlID));
-        _extControls[controlID].AsAxis().value = value;
+        (_extControls[controlID] as Axis).value = value;
     }
 
     protected void SetExtControlButton(byte controlID, float value) {
         Assert.IsTrue(_extControls.ContainsKey(controlID));
-        _extControls[controlID].AsButton().value = value;
+        (_extControls[controlID] as Button).value = value;
     }
 
     public bool GetTouch(byte controlID, ref Vector2 position, ref bool touch) {
         Control control = findControl(controlID);
         if (control != null) {
-            position = control.AsTouch().position;
-            touch = control.AsTouch().touch;
+            position = (control as AirVRInput.Touch).position;
+            touch = (control as AirVRInput.Touch).touch;
             return true;
         }
         return false;
@@ -288,8 +250,8 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
     public bool GetTransform(byte controlID, ref Vector3 position, ref Quaternion orientation) {
         Control control = findControl(controlID);
         if (control != null) {
-            position = control.AsTransform().position;
-            orientation = control.AsTransform().orientation;
+            position = (control as Xform).position;
+            orientation = (control as Xform).orientation;
             return true;
         }
         return false;
@@ -298,9 +260,9 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
     public bool GetTransform(byte controlID, ref long timeStamp, ref Vector3 position, ref Quaternion orientation) {
         Control control = findControl(controlID);
         if (control != null) {
-            position = control.AsTransform().position;
-            orientation = control.AsTransform().orientation;
-            timeStamp = control.AsTransform().timeStamp;
+            position = (control as Xform).position;
+            orientation = (control as Xform).orientation;
+            timeStamp = (control as Xform).timeStamp;
             return true;
         }
         return false;
@@ -308,32 +270,32 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
 
     public Quaternion GetOrientation(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsOrientation().value : Quaternion.identity;
+        return control != null ? (control as Orientation).value : Quaternion.identity;
     }
 
     public Vector4 GetAxis4D(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsAxis4D().value : Vector4.zero;
+        return control != null ? (control as Axis4D).value : Vector4.zero;
     }
 
     public Vector3 GetAxis3D(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsAxis3D().value : Vector3.zero;
+        return control != null ? (control as Axis3D).value : Vector3.zero;
     }
 
     public Vector2 GetAxis2D(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsAxis2D().value : Vector2.zero;
+        return control != null ? (control as Axis2D).value : Vector2.zero;
     }
 
     public float GetAxis(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsAxis().value : 0.0f;
+        return control != null ? (control as Axis).value : 0.0f;
     }
 
     public float GetButtonRaw(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsButton().value : 0.0f;
+        return control != null ? (control as Button).value : 0.0f;
     }
 
     public bool GetButton(byte controlID) {
@@ -342,12 +304,42 @@ public abstract class AirVRInputDevice : AirVRInputReceiver {
 
     public bool GetButtonDown(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsButton().IsDown() : false;
+        return control != null ? (control as Button).IsDown() : false;
     }
 
     public bool GetButtonUp(byte controlID) {
         Control control = findControl(controlID);
-        return control != null ? control.AsButton().IsUp() : false;
+        return control != null ? (control as Button).IsUp() : false;
+    }
+
+    // touches
+    public int GetTouchCount() {
+        int count = 0;
+        foreach (var control in _controls.Values) {
+            var touch = control as AirVRInput.Touch;
+            if (touch == null) { continue; }
+
+            if (touch.active) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public AirVRInput.Touch GetTouch(int index) {
+        var i = 0;
+        foreach (var control in _controls.Values) {
+            var touch = control as AirVRInput.Touch;
+            if (touch == null || touch.active == false) { continue; }
+
+            if (i == index) {
+                return touch;
+            }
+            else {
+                i++;
+            }
+        }
+        return null;
     }
 
     // implements IAirVRInputReceiver

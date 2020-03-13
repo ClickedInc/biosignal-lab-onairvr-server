@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -35,6 +35,7 @@ public abstract class AirVRTrackingModel {
     }
 
     protected abstract void OnUpdateEyePose(AirVRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation);
+    protected abstract void OnUpdateEyePose(AirVRClientConfig config, Vector3 leftEyePosition, Quaternion leftEyeOrientation, Vector3 rightEyePosition, Quaternion rightEyeOrientation);
 
     public Matrix4x4 HMDSpaceToWorldMatrix  { get; private set; }
 
@@ -52,6 +53,16 @@ public abstract class AirVRTrackingModel {
                                               HMDTrackingRootRotation, 
                                               trackingRoot.lossyScale);
     }
+
+    public void UpdateEyePose(AirVRClientConfig config, Vector3 leftEyePosition, Quaternion leftEyeOrientation, Vector3 rightEyePosition, Quaternion rightEyeOrientation) {
+        OnUpdateEyePose(config, leftEyePosition, leftEyeOrientation, rightEyePosition, rightEyeOrientation);
+
+        var centerEyePosition = (leftEyePosition + rightEyePosition) / 2;
+        Transform trackingRoot = centerEyeAnchor.parent;
+        HMDSpaceToWorldMatrix = Matrix4x4.TRS(trackingRoot.localToWorldMatrix.MultiplyPoint(centerEyeAnchor.localPosition - centerEyePosition),
+                                              HMDTrackingRootRotation,
+                                              trackingRoot.lossyScale);
+    }
 }
 
 public class AirVRHeadTrackingModel : AirVRTrackingModel {
@@ -66,11 +77,20 @@ public class AirVRHeadTrackingModel : AirVRTrackingModel {
         centerEyeAnchor.localPosition = centerEyePosition;
         rightEyeAnchor.localPosition = centerEyePosition + centerEyeOrientation * (Vector3.right * 0.5f * config.ipd);
     }
+
+    protected override void OnUpdateEyePose(AirVRClientConfig config, Vector3 leftEyePosition, Quaternion leftEyeOrientation, Vector3 rightEyePosition, Quaternion rightEyeOrientation) {
+        centerEyeAnchor.localPosition = (leftEyePosition + rightEyePosition) / 2;
+        centerEyeAnchor.localRotation = leftEyeOrientation;
+        leftEyeAnchor.localPosition = leftEyePosition;
+        leftEyeAnchor.localRotation = leftEyeOrientation;
+        rightEyeAnchor.localPosition = rightEyePosition;
+        rightEyeAnchor.localRotation = rightEyeOrientation;
+    }
 }
 
 public class AirVRIPDOnlyTrackingModel : AirVRTrackingModel {
     public AirVRIPDOnlyTrackingModel(IAirVRTrackingModelContext context, Transform leftEyeAnchor, Transform centerEyeAnchor, Transform rightEyeAnchor)
-        : base(context, leftEyeAnchor, centerEyeAnchor, rightEyeAnchor) {}
+        : base(context, leftEyeAnchor, centerEyeAnchor, rightEyeAnchor) { }
 
     // implements AirVRTrackingModel
     protected override void OnUpdateEyePose(AirVRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation) {
@@ -79,6 +99,10 @@ public class AirVRIPDOnlyTrackingModel : AirVRTrackingModel {
         leftEyeAnchor.localPosition = centerEyeOrientation * (Vector3.left * 0.5f * config.ipd);
         centerEyeAnchor.localPosition = Vector3.zero;
         rightEyeAnchor.localPosition = centerEyeOrientation * (Vector3.right * 0.5f * config.ipd);
+    }
+
+    protected override void OnUpdateEyePose(AirVRClientConfig config, Vector3 leftEyePosition, Quaternion leftEyeOrientation, Vector3 rightEyePosition, Quaternion rightEyeOrientation) {
+        // TODO implement
     }
 }
 
@@ -134,7 +158,6 @@ public class AirVRExternalTrackerTrackingModel : AirVRTrackingModel {
     }
 
     // implements AirVRTrackingModel
-
     protected override Quaternion HMDTrackingRootRotation {
         get {
             return trackingOriginRotation * _localTrackerRotationOnIdentityHeadOrientation;
@@ -164,6 +187,10 @@ public class AirVRExternalTrackerTrackingModel : AirVRTrackingModel {
         }
     }
 
+    protected override void OnUpdateEyePose(AirVRClientConfig config, Vector3 leftEyePosition, Quaternion leftEyeOrientation, Vector3 rightEyePosition, Quaternion rightEyeOrientation) {
+        // TODO implement
+    }
+
     public override void StartTracking() {
         updateTrackingSpace();
     }
@@ -176,5 +203,9 @@ public class AirVRNoPotisionTrackingModel : AirVRTrackingModel {
     // implements AirVRTrackingModel
     protected override void OnUpdateEyePose(AirVRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation) {
         centerEyeAnchor.localRotation = leftEyeAnchor.localRotation = rightEyeAnchor.localRotation = centerEyeOrientation;
+    }
+
+    protected override void OnUpdateEyePose(AirVRClientConfig config, Vector3 leftEyePosition, Quaternion leftEyeOrientation, Vector3 rightEyePosition, Quaternion rightEyeOrientation) {
+        // TODO implement
     }
 }

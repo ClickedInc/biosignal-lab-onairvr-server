@@ -1,6 +1,6 @@
 ﻿/***********************************************************
 
-  Copyright (c) 2017-2018 Clicked, Inc.
+  Copyright (c) 2017-present Clicked, Inc.
 
   Licensed under the MIT license found in the LICENSE file 
   in the Docs folder of the distributed package.
@@ -60,20 +60,38 @@ internal class AirVRHeadTrackerDeviceFeedback : AirVRTrackedDeviceFeedback {
     }
 }
 
-public class AirVRTrackedControllerDeviceFeedback : AirVRTrackedDeviceFeedback {
-    public AirVRTrackedControllerDeviceFeedback(Texture2D cookieTexture, float cookieDepthScaleMultiplier)
-        : base(cookieTexture, cookieDepthScaleMultiplier) {}
+public class AirVRLeftHandTrackerDeviceFeedback : AirVRTrackedDeviceFeedback {
+    public AirVRLeftHandTrackerDeviceFeedback(Texture2D cookieTexture, float cookieDepthScaleMultiplier)
+        : base(cookieTexture, cookieDepthScaleMultiplier) { }
 
-    // implements AirVRPointerInputDeviceFeedback
+    // implements AirVRTrackedDeviceFeedback
     protected override byte raycastHitResultKey {
         get {
-            return (byte)AirVRTrackedControllerKey.RaycastHitResult;
+            return (byte)AirVRLeftHandTrackerKey.RaycastHitResult;
         }
     }
 
     public override string name {
         get {
-            return AirVRInputDeviceName.TrackedController;
+            return AirVRInputDeviceName.LeftHandTracker;
+        }
+    }
+}
+
+public class AirVRRightHandTrackerDeviceFeedback : AirVRTrackedDeviceFeedback {
+    public AirVRRightHandTrackerDeviceFeedback(Texture2D cookieTexture, float cookieDepthScaleMultiplier)
+        : base(cookieTexture, cookieDepthScaleMultiplier) { }
+
+    // implements AirVRTrackedDeviceFeedback
+    protected override byte raycastHitResultKey {
+        get {
+            return (byte)AirVRRightHandTrackerKey.RaycastHitResult;
+        }
+    }
+
+    public override string name {
+        get {
+            return AirVRInputDeviceName.RightHandTracker;
         }
     }
 }
