@@ -45,11 +45,15 @@ public class AirVRPredictedMotionProvider {
             timestamp = getLong(_msgRecv.Data, ref pos);
             _predictionTime = getFloat(_msgRecv.Data, ref pos);
 
+            var leftEyePosition = getPosition(_msgRecv.Data, ref pos);
+            var rightEyePosition = getPosition(_msgRecv.Data, ref pos);
             var headOrientation = getRotation(_msgRecv.Data, ref pos);
+
+            leftEye = new Pose(leftEyePosition, headOrientation);
+            rightEye = new Pose(rightEyePosition, headOrientation);
+
             projection = getProjection(_msgRecv.Data, ref pos);
 
-            leftEye = new Pose(getPosition(_msgRecv.Data, ref pos), headOrientation);
-            rightEye = new Pose(getPosition(_msgRecv.Data, ref pos), headOrientation);
             rightHand = new Pose(getPosition(_msgRecv.Data, ref pos), getRotation(_msgRecv.Data, ref pos));
         }
     }
@@ -79,9 +83,10 @@ public class AirVRPredictedMotionProvider {
     }
 
     private Vector3 getPosition(byte[] buffer, ref int pos) {
+        // convert coordinate from OpenGL to Unity
         var result = new Vector3(BitConverter.ToSingle(_msgRecv.Data, pos),
                                  BitConverter.ToSingle(_msgRecv.Data, pos + 4),
-                                 BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2));
+                                 -BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2));
         pos += 12;
 
         return result;
