@@ -128,6 +128,7 @@ public class AirVRClientConfig {
     public int eyeTextureHeight { get { return EyeTextureHeight; } }
     public int videoWidth { get { return VideoWidth; } }
     public int videoHeight { get { return VideoHeight; } }
+    public float[] cameraProjection { get { return CameraProjection; } }
 
     public float framerate {
         get {

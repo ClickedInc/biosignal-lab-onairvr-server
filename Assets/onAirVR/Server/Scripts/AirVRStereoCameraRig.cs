@@ -30,9 +30,10 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     private Matrix4x4 _worldToHMDSpaceMatrix;
     private Camera[] _cameras;
     private AirVRTrackingModel _trackingModelObject;
-    private AirVRPredictedMotionProvider _predictedMotionProvider;
 
     internal Transform trackingSpace { get; private set; }
+
+    public AirVRPredictedMotionProvider predictedMotionProvider { get; private set; }
 
     public Camera leftEyeCamera {
         get {
@@ -125,11 +126,11 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     }
 
     protected override void init() {
-        _predictedMotionProvider = new AirVRPredictedMotionProvider();
+        predictedMotionProvider = new AirVRPredictedMotionProvider();
 
-        inputStream.AddInputDevice(new AirVRHeadTrackerInputDevice(_predictedMotionProvider));
+        inputStream.AddInputDevice(new AirVRHeadTrackerInputDevice(predictedMotionProvider));
         inputStream.AddInputDevice(new AirVRLeftHandTrackerInputDevice());
-        inputStream.AddInputDevice(new AirVRRightHandTrackerInputDevice(_predictedMotionProvider));
+        inputStream.AddInputDevice(new AirVRRightHandTrackerInputDevice(predictedMotionProvider));
         inputStream.AddInputDevice(new AirVRControllerInputDevice());
 
         if (_trackingModelObject == null) {
@@ -138,7 +139,7 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     }
 
     internal override void OnUpdate() {
-        _predictedMotionProvider.Update();
+        predictedMotionProvider.Update();
 
         base.OnUpdate();
     }
@@ -163,11 +164,17 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     }
 
     protected override void updateCameraProjection(AirVRClientConfig config, Rect renderProjection, Rect encodingProjection) {
-        float[] renderProj = { renderProjection.xMin, renderProjection.yMax, renderProjection.xMax, renderProjection.yMin };
+        float[] leftRenderProj = { renderProjection.xMin, renderProjection.yMax, renderProjection.xMax, renderProjection.yMin };
 
-        leftEyeCamera.projectionMatrix = AirVRClientConfig.CalcCameraProjectionMatrix(renderProj, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
-        var rightProjMatrix = AirVRClientConfig.CalcCameraProjectionMatrix(renderProj, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
-        rightEyeCamera.projectionMatrix = AirVRClientConfig.FlipCameraProjectionMatrixHorizontally(rightProjMatrix);
+        float[] rightRenderProj = {
+            renderProjection.xMin - (config.cameraProjection[0] + config.cameraProjection[2]),
+            renderProjection.yMax,
+            renderProjection.xMax - (config.cameraProjection[0] + config.cameraProjection[2]),
+            renderProjection.yMin
+        };
+
+        leftEyeCamera.projectionMatrix = AirVRClientConfig.CalcCameraProjectionMatrix(leftRenderProj, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
+        rightEyeCamera.projectionMatrix = AirVRClientConfig.CalcCameraProjectionMatrix(rightRenderProj, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
 
         var viewport = new Rect((encodingProjection.width - renderProjection.width) / 2.0f / encodingProjection.width,
                                 (encodingProjection.height - renderProjection.height) / 2.0f / encodingProjection.height,

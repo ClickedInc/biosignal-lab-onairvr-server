@@ -19,4 +19,10 @@ public class AirVRRightHandTrackerInputDevice : AirVRInputDevice {
     protected override void MakeControlList() {
         AddControlTransform((byte)AirVRRightHandTrackerKey.Transform);
     }
+
+    protected override void UpdateExtendedControls() {
+        if (isRegistered == false) { return; }
+
+        OverrideControlTransform((byte)AirVRRightHandTrackerKey.Transform, _motionProvider.timestamp, _motionProvider.rightHand.position, _motionProvider.rightHand.rotation);
+    }
 }
