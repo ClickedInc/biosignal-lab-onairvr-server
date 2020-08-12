@@ -61,13 +61,13 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
         Max
     }
-    private PlaybackMode playbackMode = PlaybackMode.Predict_TimeWarp;
+    private PlaybackMode playbackMode = PlaybackMode.Predict_NoTimeWarp;
 
     private void Awake() {
         var playback = transform.GetComponentInParent<MotionPredictionPlayback>();
 
-        playbackCameras[0] = transform.Find("LeftCam").GetComponent<Camera>();
-        playbackCameras[1] = transform.Find("RightCam").GetComponent<Camera>();
+        playbackCameras[0] = transform.Find("TrackingSpace/LeftEyeAnchor").GetComponent<Camera>();
+        playbackCameras[1] = transform.Find("TrackingSpace/RightEyeAnchor").GetComponent<Camera>();
 
         Time.captureFramerate = 60;
 
@@ -110,22 +110,18 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             isGetStartTime = true;
         }
 
-        if (playbackState == PlaybackState.Playing)
-        {
-            double timeStampInterval = (FlicksToSecond((double)CSVReader.ReadLine(qf + 1)["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(playbackRangeFrom)["timestamp"]));
+        if (playbackState == PlaybackState.Playing) {
             double updateTimeInterval = Time.realtimeSinceStartup - startTime;
+            double timestampStart = (double)CSVReader.ReadLine(playbackRangeFrom)["timestamp"];
 
-            if (timeStampInterval <= updateTimeInterval)
-            {
-                int count = 0;
+            int count = 0;
+            double nextTimestampInterval = FlicksToSecond((double)CSVReader.ReadLine(qf + 1)["timestamp"]) - FlicksToSecond(timestampStart);
+            while (nextTimestampInterval <= updateTimeInterval) {
+                nextTimestampInterval = FlicksToSecond((double)CSVReader.ReadLine(qf + (++count + 1))["timestamp"]) - FlicksToSecond(timestampStart);
+            }
 
-                while ((FlicksToSecond((double)CSVReader.ReadLine(qf + (count + 2))["timestamp"]) - FlicksToSecond((double)CSVReader.ReadLine(playbackRangeFrom)["timestamp"])) <= updateTimeInterval)
-                {
-                    count++;
-                }
-
-                qf = qf + count;
-
+            if (count > 0) {
+                qf += count;
                 StartCoroutine(SimulationControl());
             }
         }
@@ -280,9 +276,9 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         return "Unknown";
     }
 
-    private float FlicksToSecond(double flicks)
+    private double FlicksToSecond(double flicks)
     {
-        return (float)flicks * 1 / 705600000;
+        return flicks / 705600000;
     }
 
     private void CheckMatricData()
@@ -320,6 +316,10 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         bool usePredict = mode == PlaybackMode.Predict_NoTimeWarp || mode == PlaybackMode.Predict_TimeWarp;
         bool useTimeWarp = mode == PlaybackMode.NotPredict_TimeWarp || mode == PlaybackMode.Predict_TimeWarp;
 
+        var leftEyePosQF = Vector3.zero;
+        var rightEyePosQF = Vector3.zero;
+        var leftEyePosQH = Vector3.zero;
+        var rightEyePosQH = Vector3.zero;
         Quaternion rotationQF = Quaternion.identity;
         MatrixArray projectionQF = new MatrixArray();
         Quaternion rotationQH = Quaternion.identity;
@@ -347,12 +347,12 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             qh = qf;
         }
 
-        if (getMotionData(usePredict, qf, ref rotationQF, ref projectionQF) == false ||
-            getMotionData(false, qh, ref rotationQH, ref projectionQH) == false) {
+        if (getMotionData(usePredict, qf, ref leftEyePosQF, ref rightEyePosQF, ref rotationQF, ref projectionQF) == false ||
+            getMotionData(false, qh, ref leftEyePosQH, ref rightEyePosQH, ref rotationQH, ref projectionQH) == false) {
             return;
         }
 
-        modifyCameraProjectionAndTexture(rotationQF, projectionQF, rotationQH, projectionQH, useTimeWarp);
+        modifyCameraProjectionAndTexture(leftEyePosQF, rightEyePosQF, rotationQF, projectionQF, rotationQH, projectionQH, useTimeWarp);
 
         if (capture) {
             foreach (var cam in playbackCameras) {
@@ -402,31 +402,44 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
     }
 
-    private bool getMotionData(bool isPredict, int dataNum, ref Quaternion orientation, ref MatrixArray projection) {
+    private bool getMotionData(bool isPredict, int dataNum, ref Vector3 leftEyePos, ref Vector3 rightEyePos, ref Quaternion orientation, ref MatrixArray projection) {
         if (dataNum >= CSVReader.lineLength - 1) {
             return false;
         }
 
-        string orientationPrefix = isPredict ? "predicted_orientation_" : "input_orientation_";
-        string projectionPreix = isPredict ? "predicted_projection_" : "input_projection_";
+        string leftEyePosPrefix = isPredict ? "predicted_left_eye_position_" : "input_left_eye_position_";
+        string rightEyePosPrefix = isPredict ? "predicted_right_eye_position_" : "input_right_eye_position_";
+        string orientationPrefix = isPredict ? "predicted_head_orientation_" : "input_head_orientation_";
+        string projectionPreix = isPredict ? "predicted_camera_projection_" : "input_camera_projection_";
 
-        orientation.x = -(float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "x"];
-        orientation.y = -(float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "y"];
-        orientation.z = (float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "z"];
-        orientation.w = (float)(double)CSVReader.ReadLine(dataNum)[orientationPrefix + "w"];
+        var line = CSVReader.ReadLine(dataNum);
 
-        projection.ChangeElement(
-            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "left"],
-            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "right"],
-            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "bottom"],
-            (float)(double)CSVReader.ReadLine(dataNum)[projectionPreix + "top"]
+        leftEyePos = new Vector3((float)(double)line[leftEyePosPrefix + "x"],
+                                 (float)(double)line[leftEyePosPrefix + "y"],
+                                 (float)(double)line[leftEyePosPrefix + "z"]);
+        rightEyePos = new Vector3((float)(double)line[rightEyePosPrefix + "x"],
+                                  (float)(double)line[rightEyePosPrefix + "y"],
+                                  (float)(double)line[rightEyePosPrefix + "z"]);
+
+        orientation.x = -(float)(double)line[orientationPrefix + "x"];
+        orientation.y = -(float)(double)line[orientationPrefix + "y"];
+        orientation.z = (float)(double)line[orientationPrefix + "z"];
+        orientation.w = (float)(double)line[orientationPrefix + "w"];
+
+        projection.ChangeElement((float)(double)line[projectionPreix + "left"],
+                                 (float)(double)line[projectionPreix + "right"],
+                                 (float)(double)line[projectionPreix + "bottom"],
+                                 (float)(double)line[projectionPreix + "top"]
         );
         return true;
     }
 
-    private void modifyCameraProjectionAndTexture(Quaternion rotationQF, MatrixArray projectionQF, Quaternion rotationQH, MatrixArray projectionQH, bool useTimeWarp)
+    private void modifyCameraProjectionAndTexture(Vector3 leftEyePosQF, Vector3 rightEyePosQF, Quaternion rotationQF, MatrixArray projectionQF, Quaternion rotationQH, MatrixArray projectionQH, bool useTimeWarp)
     {
-        transform.rotation = rotationQF;
+        playbackCameras[0].transform.localPosition = leftEyePosQF;
+        playbackCameras[1].transform.localPosition = rightEyePosQF;
+        playbackCameras[0].transform.localRotation = playbackCameras[1].transform.localRotation = rotationQF;
+
         leftPreviewCamera.transform.localRotation = rightPreviewCamera.transform.localRotation = useTimeWarp ? rotationQH : rotationQF;
         leftTargetTextureAnchor.localRotation = rightTargetTextureAnchor.localRotation = rotationQF;
 

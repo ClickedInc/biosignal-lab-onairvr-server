@@ -199,6 +199,12 @@ public class AirVRGraphicRaycaster : GraphicRaycaster {
     // overrides GraphicRaycaster
     public override Camera eventCamera {
         get {
+            if (_pointers == null || 
+                _pointers.Length == 0 ||
+                _pointers[0].cameraRig == null ||
+                _pointers[0].cameraRig.cameras == null ||
+                _pointers[0].cameraRig.cameras.Length == 0) { return null; }
+
             return _pointers[0].cameraRig.cameras[0];
         }
     }
