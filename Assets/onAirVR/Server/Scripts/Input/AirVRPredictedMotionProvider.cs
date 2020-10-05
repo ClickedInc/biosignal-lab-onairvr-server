@@ -10,14 +10,19 @@ public class AirVRPredictedMotionProvider {
 
     private float _predictionTime;
 
+    public bool bypassPrediction { get; private set; }
     public long timestamp { get; private set; }
     public Vector4 projection { get; private set; }
     public Pose leftEye { get; private set; }
     public Pose rightEye { get; private set; }
     public Pose rightHand { get; private set; }
 
+    public AirVRPredictedMotionProvider(bool bypassPrediction) {
+        this.bypassPrediction = bypassPrediction;
+    }
+
     public void Connect(string endpoint) {
-        if (_zmqPredictedMotion != null) { return; }
+        if (bypassPrediction || _zmqPredictedMotion != null) { return; }
 
         _zmqPredictedMotion = new PullSocket();
         _zmqPredictedMotion.Connect(endpoint);
@@ -27,6 +32,11 @@ public class AirVRPredictedMotionProvider {
     }
 
     public void Update() {
+        if (bypassPrediction) {
+            projection = new Vector4(-1f, 1f, 1f, -1f);
+            return;
+        }
+
         if (_zmqPredictedMotion == null) { return; }
 
         while (_zmqPredictedMotion.TryReceive(ref _msgRecv, TimeSpan.Zero)) {
@@ -59,7 +69,7 @@ public class AirVRPredictedMotionProvider {
     }
 
     public void Close() {
-        if (_zmqPredictedMotion == null) { return; }
+        if (bypassPrediction || _zmqPredictedMotion == null) { return; }
 
         _zmqPredictedMotion.Close();
         _msgRecv.Close();

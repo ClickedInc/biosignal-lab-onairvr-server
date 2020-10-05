@@ -66,6 +66,8 @@ public abstract class AirVRCameraRig : MonoBehaviour {
     private bool _encodeVideoFrameRequested;
     private AirVRCameraEventEmitter _cameraEventEmitter;
 
+    public bool bypassPrediction { get; set; } = false;
+
     private void enableCameras() {
         foreach (Camera cam in cameras) {
             cam.enabled = true;
@@ -155,8 +157,13 @@ public abstract class AirVRCameraRig : MonoBehaviour {
             Vector3 rightEyePosition = Vector3.zero;
             Quaternion rightEyeOrientation = Quaternion.identity;
 
-            inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerInputDevice.ControlKey.TransformRightEye, ref timeStamp, ref rightEyePosition, ref rightEyeOrientation);
-            inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerInputDevice.ControlKey.TransformLeftEye, ref timeStamp, ref leftEyePosition, ref leftEyeOrientation);
+            if (bypassPrediction) {
+                inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerKey.Transform, ref leftEyePosition, ref leftEyeOrientation);
+            }
+            else {
+                inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerInputDevice.ControlKey.TransformRightEye, ref timeStamp, ref rightEyePosition, ref rightEyeOrientation);
+                inputStream.GetTransform(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerInputDevice.ControlKey.TransformLeftEye, ref timeStamp, ref leftEyePosition, ref leftEyeOrientation);
+            }
 
             var projection = inputStream.GetAxis4D(AirVRInputDeviceName.HeadTracker, (byte)AirVRHeadTrackerInputDevice.ControlKey.Projection);
             var center = new Vector2((projection.x + projection.z) / 2, (projection.y + projection.w) / 2);
@@ -179,7 +186,14 @@ public abstract class AirVRCameraRig : MonoBehaviour {
                                   renderProjection.xMin, renderProjection.yMax, renderProjection.xMax, renderProjection.yMin,
                                   encodingProjection.xMin, encodingProjection.yMax, encodingProjection.xMax, encodingProjection.yMin,
                                   out _viewNumber);
-            updateCameraTransforms(_config, leftEyePosition, leftEyeOrientation, rightEyePosition, rightEyeOrientation);
+
+            if (bypassPrediction) {
+                updateCameraTransforms(_config, leftEyePosition, leftEyeOrientation);
+            }
+            else {
+                updateCameraTransforms(_config, leftEyePosition, leftEyeOrientation, rightEyePosition, rightEyeOrientation);
+            }
+
             updateCameraProjection(_config, renderProjection, encodingProjection);
             updateControllerTransforms(_config);
 

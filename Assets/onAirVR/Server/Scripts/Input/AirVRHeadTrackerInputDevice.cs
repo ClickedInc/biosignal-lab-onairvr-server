@@ -41,9 +41,14 @@ public class AirVRHeadTrackerInputDevice : AirVRInputDevice {
 
         _motionProvider.Update();
 
-        OverrideControlTransform((byte)ControlKey.TransformLeftEye, _motionProvider.timestamp, _motionProvider.leftEye.position, _motionProvider.leftEye.rotation);
-        SetExtControlTransform((byte)ControlKey.TransformRightEye, _motionProvider.timestamp, _motionProvider.rightEye.position, _motionProvider.rightEye.rotation);
-        SetExtControlAxis4D((byte)ControlKey.Projection, _motionProvider.projection);
+        if (_motionProvider.bypassPrediction) {
+            SetExtControlAxis4D((byte)ControlKey.Projection, new Vector4(-1f, 1f, 1f, -1f));
+        }
+        else {
+            OverrideControlTransform((byte)ControlKey.TransformLeftEye, _motionProvider.timestamp, _motionProvider.leftEye.position, _motionProvider.leftEye.rotation);
+            SetExtControlTransform((byte)ControlKey.TransformRightEye, _motionProvider.timestamp, _motionProvider.rightEye.position, _motionProvider.rightEye.rotation);
+            SetExtControlAxis4D((byte)ControlKey.Projection, _motionProvider.projection);
+        }
     }
 
     public override void OnRegistered(byte inDeviceID, string options) {

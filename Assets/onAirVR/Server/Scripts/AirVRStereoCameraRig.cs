@@ -126,7 +126,7 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     }
 
     protected override void init() {
-        predictedMotionProvider = new AirVRPredictedMotionProvider();
+        predictedMotionProvider = new AirVRPredictedMotionProvider(bypassPrediction);
 
         inputStream.AddInputDevice(new AirVRHeadTrackerInputDevice(predictedMotionProvider));
         inputStream.AddInputDevice(new AirVRLeftHandTrackerInputDevice());

@@ -13,6 +13,8 @@ public class AirVRPredictiveCameraRig : MonoBehaviour, AirVRServer.ProfilerEvent
     private AirVRStereoCameraRig _cameraRig;
     private OCSVRWorksCameraRig _foveatedRenderer;
 
+    [SerializeField] private bool _bypassPrediction = false;
+
     private void Awake() {
         _msg = new NetMQ.Msg();
 
@@ -20,6 +22,8 @@ public class AirVRPredictiveCameraRig : MonoBehaviour, AirVRServer.ProfilerEvent
 
         _cameraRig = GetComponent<AirVRStereoCameraRig>();
         _foveatedRenderer = GetComponent<OCSVRWorksCameraRig>();
+
+        _cameraRig.bypassPrediction = _bypassPrediction;
     }
 
     private void Start() {
@@ -78,6 +82,8 @@ public class AirVRPredictiveCameraRig : MonoBehaviour, AirVRServer.ProfilerEvent
 
     // implements AirVRServer.ProfilerEventHandler
     public void AirVRProfilerEnabled(int clientHandle, string reportEndpoint) {
+        if (_bypassPrediction) { return; }
+        
         Debug.Assert(_zmqReportEndpoint == null);
         if (string.IsNullOrEmpty(reportEndpoint)) {
             return;
@@ -97,6 +103,8 @@ public class AirVRPredictiveCameraRig : MonoBehaviour, AirVRServer.ProfilerEvent
     }
 
     public void AirVRProfileDataReceived(int clientHandle, byte[] cbor) {
+        if (_bypassPrediction) { return; }
+
         Debug.Assert(_zmqReportEndpoint != null);
 
         _msg.InitPool(cbor.Length);
@@ -106,6 +114,8 @@ public class AirVRPredictiveCameraRig : MonoBehaviour, AirVRServer.ProfilerEvent
     }
 
     public void AirVRProfilerDisabled(int clientHandle) {
+        if (_bypassPrediction) { return; }
+
         _zmqReportEndpoint.Close();
         _zmqReportEndpoint.Dispose();
         _zmqReportEndpoint = null;
