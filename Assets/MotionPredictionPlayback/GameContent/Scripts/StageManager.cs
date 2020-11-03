@@ -50,6 +50,7 @@ public class StageManager : MonoBehaviour {
 
     private void Update()
     {
+        
         if (remainTime <= 0)
         {
             GameContentManager.Instance.GameOver();
