@@ -10,16 +10,23 @@ public class Plate : MonoBehaviour
 {
     private void OnCollisionEnter(Collision collision)
     {
+        Debug.Log(collision);
         if(FruitsSpawn.btCount==0)
         {
-            //collision.gameObject.GetComponent<Rigidbody>().isKinematic = true;
+            for (int i = 0; i < 4; i++)
+            {
+
+                if (collision != null && collision.transform.parent.GetChild(i) != null)
+                { collision.transform.parent.GetChild(i).gameObject.AddComponent<DestroySelf>(); }
+            }
         }
         FruitsSpawn.bound = true;
+        Debug.Log(FruitsSpawn.bound);
         collision.transform.parent.gameObject.AddComponent<DestroySelf>();
         collision.gameObject.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
         //if(FruitsSpawn.btCount == 0)
         
-        //{
+        //{dw
         //    if (collision.gameObject.tag == "Target")
         //    {
 

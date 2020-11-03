@@ -8,7 +8,7 @@ public class Table : MonoBehaviour
     {
         collision.gameObject.AddComponent<DestroySelf>();
         collision.gameObject.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
-
+        FruitsSpawn.bound = true;
     }
 
 }
