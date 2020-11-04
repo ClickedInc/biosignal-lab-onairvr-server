@@ -4,14 +4,16 @@ using UnityEngine;
 
 public class UI : MonoBehaviour
 {
-    public GameObject ui;
-    //Camera main_camera = GameObject.Find("Camera").GetComponent<Camera>();
-    // Start is called before the first frame update
-    
+    private RectTransform rt;
+    public GameObject main_camera;
+    private void Start()
+    {
+        rt = GetComponent<RectTransform>(); 
 
+    }
     // Update is called once per frame
     void Update()
     {
-        //ui.transform.LookAt(transform.position + main_camera.transform.rotation * Vector3.back, main_camera.transform.rotation * Vector3.up);
+        rt.anchoredPosition = main_camera.transform.position;
     }
 }

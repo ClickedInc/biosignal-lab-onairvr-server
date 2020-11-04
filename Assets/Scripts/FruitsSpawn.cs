@@ -48,8 +48,8 @@ public class FruitsSpawn : MonoBehaviour
     {
 
 
-        float _x = Random.Range(0.1f, 1f);
-        float _z = Random.Range(0.1f, 1f);
+        float _x = Random.Range(0.1f, 1f) * (fallingSpeed/2);
+        float _z = Random.Range(0.1f, 1f) * (fallingSpeed/2);
 
 
 
@@ -86,7 +86,11 @@ public class FruitsSpawn : MonoBehaviour
                 currentFruits.transform.localScale = new Vector3(0.013f, 0.013f, 0.013f);
                 for (int i = 0; i < 4; i++)
                 {
-                    currentFruits.transform.GetChild(i).GetComponent<ConstantForce>().force = new Vector3(0f,-fallingSpeed,0f);
+                    currentFruits.transform.GetChild(i).GetComponent<ConstantForce>().force = new Vector3(0f, -fallingSpeed, 0f);
+                    if (currentFruits.transform.GetChild(i).GetComponent<FixedJoint>() != null)
+                    {
+                        
+                    }
                 }
                 Physics.gravity = new Vector3(0f, -fallingSpeed, 0f);
 

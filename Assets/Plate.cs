@@ -15,7 +15,11 @@ public class Plate : MonoBehaviour
         {
             for (int i = 0; i < 4; i++)
             {
-
+                if (collision.transform.parent.GetChild(i)!= null)
+                {
+                    //collision.transform.parent.GetChild(i).GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezePositionY;
+                    
+                }
                 if (collision != null && collision.transform.parent.GetChild(i) != null)
                 { collision.transform.parent.GetChild(i).gameObject.AddComponent<DestroySelf>(); }
             }
