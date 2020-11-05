@@ -93,10 +93,6 @@ public class FruitsSpawn : MonoBehaviour
                 for (int i = 0; i < 4; i++)
                 {
                     currentFruits.transform.GetChild(i).GetComponent<ConstantForce>().force = new Vector3(0f, -fallingSpeed, 0f);
-                    if (currentFruits.transform.GetChild(i).GetComponent<FixedJoint>() != null)
-                    {
-                        
-                    }
                 }
 
                 spawn = false;
@@ -133,42 +129,32 @@ public class FruitsSpawn : MonoBehaviour
                             _x = Math.Abs(_x); _z = Math.Abs(_z);
                             currentFruits.transform.GetChild(3).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(3).GetComponent<Rigidbody>().AddForce(_x * -0.3f, 0, 0f, ForceMode.Impulse);
-                            //currentFruits.transform.GetChild(0).gameObject.tag = "Piece";
-
                             currentFruits.transform.GetChild(2).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(2).GetComponent<Rigidbody>().AddForce(_x * -0.3f, 0, 0f, ForceMode.Impulse);
-                            //currentFruits.transform.GetChild(1).gameObject.tag = "Piece";
 
 
                             currentFruits.transform.GetChild(0).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(0).GetComponent<Rigidbody>().AddForce(_x * 0.3f, 0, 0f, ForceMode.Impulse);
-                           // currentFruits.transform.GetChild(2).gameObject.tag = "Piece";
 
                             currentFruits.transform.GetChild(1).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(1).GetComponent<Rigidbody>().AddForce(_x * 0.3f, 0,0f, ForceMode.Impulse);
-                            //currentFruits.transform.GetChild(3).gameObject.tag = "Piece";
                         }
                         else
                         {
 
                             currentFruits.transform.GetChild(0).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(0).GetComponent<Rigidbody>().AddForce(_x * -0.3f, 0, _z * 0.3f, ForceMode.Impulse);
-                            //currentFruits.transform.GetChild(0).gameObject.tag = "Piece";
 
                             currentFruits.transform.GetChild(1).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(1).GetComponent<Rigidbody>().AddForce(_x * -0.3f, 0, _z * 0.3f, ForceMode.Impulse);
-                            //currentFruits.transform.GetChild(1).gameObject.tag = "Piece";
 
 
 
-                            // = null;
                             currentFruits.transform.GetChild(2).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(2).GetComponent<Rigidbody>().AddForce(_x * 0.3f, 0, _z * -0.3f, ForceMode.Impulse);
-                            //currentFruits.transform.GetChild(2).gameObject.tag = "Piece";
 
                             currentFruits.transform.GetChild(3).GetComponent<Rigidbody>().AddExplosionForce(30f, transform.position, 10f, 10f);
                             currentFruits.transform.GetChild(3).GetComponent<Rigidbody>().AddForce(_x * 0.3f, 0, _z * -0.3f, ForceMode.Impulse);
-                            //currentFruits.transform.GetChild(3).gameObject.tag = "Piece";
                         }
 
                     }
