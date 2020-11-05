@@ -50,24 +50,27 @@ public class FruitsSpawn : MonoBehaviour
 
         float _x = Random.Range(0.1f, 1f) * (fallingSpeed/2);
         float _z = Random.Range(0.1f, 1f) * (fallingSpeed/2);
+        
+       
 
 
 
-
-        if (GameManager.currentTime > spawnTiming)
+            if (GameManager.currentTime > spawnTiming)
         {
             int R_Value = Random.Range(0, 100);
-
+         
+          
             if (chk)
             {
                 mission.text = $"자를 횟수: {piece + 1}";
                 pFruits = Instantiate(fruits[fruit]);
-                pFruits.transform.position = GameObject.Find("P.Fruits").transform.position;
+                pFruits.AddComponent<MoveFruits>();
                 pFruits.transform.localScale = new Vector3(0.015f, 0.015f, 0.015f);
+                
                 for (int i = 0; i < 4; i++)
                 {
                     Destroy(pFruits.transform.GetChild(i).GetComponent<ConstantForce>());
-
+                    pFruits.transform.GetChild(i).GetComponent<Rigidbody>().isKinematic = true;
                 }
                 chk = false;
 
@@ -84,6 +87,9 @@ public class FruitsSpawn : MonoBehaviour
                 currentFruits = Instantiate(fruits[rg]);
                 currentFruits.transform.position = transform.position;
                 currentFruits.transform.localScale = new Vector3(0.013f, 0.013f, 0.013f);
+                if(rg==1){currentFruits.transform.localScale = new Vector3(0.014f, 0.014f, 0.014f);}
+
+
                 for (int i = 0; i < 4; i++)
                 {
                     currentFruits.transform.GetChild(i).GetComponent<ConstantForce>().force = new Vector3(0f, -fallingSpeed, 0f);
@@ -92,7 +98,6 @@ public class FruitsSpawn : MonoBehaviour
                         
                     }
                 }
-                Physics.gravity = new Vector3(0f, -fallingSpeed, 0f);
 
                 spawn = false;
 

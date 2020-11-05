@@ -54,6 +54,8 @@ public class ChkFruits : MonoBehaviour
     }
     void ChekingFruits()
     {
+        GameObject.Find("Purpose").GetComponent<Text>().text = "Great!!";
+        AudioPlayer.instance.CorrectSound();
         count++;
         if (PlayerPrefs.GetInt("Best Score", 0) < count)
         { PlayerPrefs.SetInt("Best Score", count); }

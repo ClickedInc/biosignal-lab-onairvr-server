@@ -6,7 +6,7 @@ public class AudioPlayer : MonoBehaviour
 {
 
     public AudioClip sliceSound;
-
+    public AudioClip correctSound;
     private AudioSource audioSource;
     public static AudioPlayer instance;
 
@@ -26,6 +26,10 @@ public class AudioPlayer : MonoBehaviour
     public void PlaySliceSound()
     {
         audioSource.PlayOneShot(sliceSound);
+    }
+    public void CorrectSound()
+    {
+        audioSource.PlayOneShot(correctSound);
     }
 
 
