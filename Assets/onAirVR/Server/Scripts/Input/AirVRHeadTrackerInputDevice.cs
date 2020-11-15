@@ -39,8 +39,6 @@ public class AirVRHeadTrackerInputDevice : AirVRInputDevice {
     protected override void UpdateExtendedControls() {
         if (isRegistered == false) { return; }
 
-        _motionProvider.Update();
-
         if (_motionProvider.bypassPrediction) {
             SetExtControlAxis4D((byte)ControlKey.Projection, new Vector4(-1f, 1f, 1f, -1f));
         }

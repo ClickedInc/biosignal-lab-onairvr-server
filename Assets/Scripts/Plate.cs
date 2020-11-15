@@ -10,7 +10,7 @@ public class Plate : MonoBehaviour
 {
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log(collision);
+        //Debug.Log(collision);
         if(FruitsSpawn.btCount==0)
         {
             for (int i = 0; i < 4; i++)
@@ -25,7 +25,7 @@ public class Plate : MonoBehaviour
             }
         }
         FruitsSpawn.bound = true;
-        Debug.Log(FruitsSpawn.bound);
+        //Debug.Log(FruitsSpawn.bound);
         collision.transform.parent.gameObject.AddComponent<DestroySelf>();
         collision.gameObject.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
         //if(FruitsSpawn.btCount == 0)

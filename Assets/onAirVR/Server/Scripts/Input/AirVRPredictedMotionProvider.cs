@@ -9,6 +9,8 @@ public class AirVRPredictedMotionProvider {
     private PullSocket _zmqPredictedMotion;
 
     private float _predictionTime;
+    private bool _prevExternalInputActualPress;
+    private bool _prevExternalInputPredictivePress;
 
     public bool bypassPrediction { get; private set; }
     public long timestamp { get; private set; }
@@ -16,6 +18,9 @@ public class AirVRPredictedMotionProvider {
     public Pose leftEye { get; private set; }
     public Pose rightEye { get; private set; }
     public Pose rightHand { get; private set; }
+    public ushort externalInputId { get; private set; }
+    public bool externalInputActualPress { get; private set; }
+    public bool externalInputPredictivePress { get; private set; }
 
     public AirVRPredictedMotionProvider(bool bypassPrediction) {
         this.bypassPrediction = bypassPrediction;
@@ -38,6 +43,9 @@ public class AirVRPredictedMotionProvider {
         }
 
         if (_zmqPredictedMotion == null) { return; }
+
+        _prevExternalInputActualPress = externalInputActualPress;
+        _prevExternalInputPredictivePress = externalInputPredictivePress;
 
         while (_zmqPredictedMotion.TryReceive(ref _msgRecv, TimeSpan.Zero)) {
             if (_msgRecv.Size <= 0) {
@@ -65,6 +73,18 @@ public class AirVRPredictedMotionProvider {
             projection = getProjection(_msgRecv.Data, ref pos);
 
             rightHand = new Pose(getPosition(_msgRecv.Data, ref pos), getRotation(_msgRecv.Data, ref pos));
+
+            externalInputId = getUshort(_msgRecv.Data, ref pos);
+
+            var actualPress = getBool(_msgRecv.Data, ref pos);
+            var predictedPress = getBool(_msgRecv.Data, ref pos);
+
+            if (_prevExternalInputActualPress != actualPress) {
+                externalInputActualPress = actualPress;
+            }
+            if (_prevExternalInputPredictivePress != predictedPress) {
+                externalInputPredictivePress = predictedPress;
+            }
         }
     }
 
@@ -78,15 +98,43 @@ public class AirVRPredictedMotionProvider {
         _zmqPredictedMotion = null;
     }
 
+    public bool GetButton(bool predicted) {
+        return predicted ? externalInputPredictivePress : externalInputActualPress;
+    }
+
+    public bool GetButtonDown(bool predicted) {
+        return (predicted ? _prevExternalInputPredictivePress : _prevExternalInputActualPress) == false &&
+               (predicted ? externalInputPredictivePress : externalInputActualPress);
+    }
+
+    public bool GetButtonUp(bool predicted) {
+        return (predicted ? _prevExternalInputPredictivePress : _prevExternalInputActualPress) &&
+               (predicted ? externalInputPredictivePress : externalInputActualPress) == false;
+    }
+
+    private bool getBool(byte[] buffer, ref int pos) {
+        var result = buffer[pos] > 0;
+        pos += 1;
+
+        return result;
+    }
+
+    private ushort getUshort(byte[] buffer, ref int pos) {
+        var result = BitConverter.ToUInt16(buffer, pos);
+        pos += 2;
+
+        return result;
+    }
+
     private long getLong(byte[] buffer, ref int pos) {
-        var result = BitConverter.ToInt64(_msgRecv.Data, pos);
+        var result = BitConverter.ToInt64(buffer, pos);
         pos += 8;
 
         return result;
     }
 
     private float getFloat(byte[] buffer, ref int pos) {
-        var result = BitConverter.ToSingle(_msgRecv.Data, pos);
+        var result = BitConverter.ToSingle(buffer, pos);
         pos += 4;
 
         return result;
@@ -94,9 +142,9 @@ public class AirVRPredictedMotionProvider {
 
     private Vector3 getPosition(byte[] buffer, ref int pos) {
         // convert coordinate from OpenGL to Unity
-        var result = new Vector3(BitConverter.ToSingle(_msgRecv.Data, pos),
-                                 BitConverter.ToSingle(_msgRecv.Data, pos + 4),
-                                 -BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2));
+        var result = new Vector3(BitConverter.ToSingle(buffer, pos),
+                                 BitConverter.ToSingle(buffer, pos + 4),
+                                 -BitConverter.ToSingle(buffer, pos + 4 * 2));
         pos += 12;
 
         return result;
@@ -114,10 +162,10 @@ public class AirVRPredictedMotionProvider {
     }
 
     private Vector4 getProjection(byte[] buffer, ref int pos) {
-        var result = new Vector4(BitConverter.ToSingle(_msgRecv.Data, pos),
-                                 BitConverter.ToSingle(_msgRecv.Data, pos + 4),
-                                 BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 2),
-                                 BitConverter.ToSingle(_msgRecv.Data, pos + 4 * 3));
+        var result = new Vector4(BitConverter.ToSingle(buffer, pos),
+                                 BitConverter.ToSingle(buffer, pos + 4),
+                                 BitConverter.ToSingle(buffer, pos + 4 * 2),
+                                 BitConverter.ToSingle(buffer, pos + 4 * 3));
         pos += 16;
 
         return result;

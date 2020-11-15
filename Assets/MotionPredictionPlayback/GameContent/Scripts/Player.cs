@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Player : MonoBehaviour {
 
-    [SerializeField] private AudioPlayer audioPlayer;
+    [SerializeField] private FruitBasketAudioPlayer audioPlayer;
     [SerializeField] private GameObject dropableApple;
 
     private AirVRStereoCameraRig cameraRig;
@@ -21,7 +21,7 @@ public class Player : MonoBehaviour {
 
     private void Start()
     {
-        //dropableApplePooler = GameContentManager.Instance.ApplePooler;
+        dropableApplePooler = GameContentManager.Instance.ApplePooler;
         targetPooler = GameContentManager.Instance.TargetPooler;
 
         dropableApplePooler.Pool(dropableApple, 20);
@@ -38,6 +38,7 @@ public class Player : MonoBehaviour {
     public void PickApple(GameObject pickedApple)
     {
         pickIndex += 1;
+        audioPlayer.PlayPickSound();
 
         if (pickIndex >= Random.Range(3, 6))
         {
@@ -48,6 +49,7 @@ public class Player : MonoBehaviour {
 
     public void CatchApple(GameObject catchedApple)
     {
+        audioPlayer.PlayCatchSound();
         targetPooler.ReturnPool(catchedApple);
         dropableApplePooler.ReturnPool(catchedApple);
 

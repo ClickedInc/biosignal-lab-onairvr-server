@@ -1,7 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
+//using System.Diagnostics;
 using System.Runtime.Remoting;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -10,29 +11,35 @@ using Random = UnityEngine.Random;
 
 public class ChkFruits : MonoBehaviour
 {
+    private AirVRStereoCameraRig _cameraRig;
     public Text result;
     // Start is called before the first frame update
     int count = 0;
-    
+
+    private void Awake() {
+        _cameraRig = FindObjectOfType<AirVRStereoCameraRig>();
+    }
+
     private void Update()
     {
 
-        if (!FruitsSpawn.spawn&&FruitsSpawn.bound)
+        if (!FruitsSpawn.gameover && !FruitsSpawn.spawn && FruitsSpawn.bound)
         {
             if (FruitsSpawn.piece + 1 == FruitsSpawn.btCount && FruitsSpawn.fruit == FruitsSpawn.rg)
             {
+                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "cleared");
 
                 ChekingFruits();
-                
 
             }
             else if (FruitsSpawn.fruit != FruitsSpawn.rg && FruitsSpawn.btCount != 0
                 || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount != 0 && FruitsSpawn.piece + 1 != FruitsSpawn.btCount
                 || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount == 0)
             {
-                GameoverText();
-                Invoke("restart", 3f);
+                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "missed");
 
+                GameoverText();
+                Restart();
             }
 
             else
@@ -41,16 +48,26 @@ public class ChkFruits : MonoBehaviour
             }
         }
     }
-    void restart()
+
+    async void Restart()
     {
         FruitsSpawn.gameover = true;
-        SceneManager.LoadScene("test");
+
+        await Task.Delay(3000);
+
+        if (Application.isPlaying == false) {
+            return;
+        }
+
+        Destroy(FruitsSpawn.pFruits);
+
+        count = 0;
+        result.text = "현재점수 : " + count.ToString();
+        GameObject.Find("Purpose").GetComponent<Text>().text = "";
+
         FruitsSpawn.chk = true;
         FruitsSpawn.spawn = true;
         FruitsSpawn.gameover = false;
-
-
-
     }
     void ChekingFruits()
     {

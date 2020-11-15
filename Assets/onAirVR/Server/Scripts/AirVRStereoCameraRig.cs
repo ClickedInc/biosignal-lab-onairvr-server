@@ -34,6 +34,7 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
     internal Transform trackingSpace { get; private set; }
 
     public AirVRPredictedMotionProvider predictedMotionProvider { get; private set; }
+    public AirVRGameEventEmitter gameEventEmitter { get; private set; }
 
     public Camera leftEyeCamera {
         get {
@@ -127,6 +128,7 @@ public sealed class AirVRStereoCameraRig : AirVRCameraRig, IAirVRTrackingModelCo
 
     protected override void init() {
         predictedMotionProvider = new AirVRPredictedMotionProvider(bypassPrediction);
+        gameEventEmitter = new AirVRGameEventEmitter(this);
 
         inputStream.AddInputDevice(new AirVRHeadTrackerInputDevice(predictedMotionProvider));
         inputStream.AddInputDevice(new AirVRLeftHandTrackerInputDevice());
