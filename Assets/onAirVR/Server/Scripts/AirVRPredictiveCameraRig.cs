@@ -27,13 +27,13 @@ public class AirVRPredictiveCameraRig : MonoBehaviour, AirVRServer.ProfilerEvent
     }
 
     private void Start() {
-        _foveatedRenderer.OnUpdateFoveationPattern += updateFoveationPattern;
-        _foveatedRenderer.OnUpdateGazeLocation += updateGazeLocation;
+        //_foveatedRenderer.OnUpdateFoveationPattern += updateFoveationPattern;
+        //_foveatedRenderer.OnUpdateGazeLocation += updateGazeLocation;
     }
 
     private void OnDestroy() {
-        _foveatedRenderer.OnUpdateFoveationPattern -= updateFoveationPattern;
-        _foveatedRenderer.OnUpdateGazeLocation -= updateGazeLocation;
+        //_foveatedRenderer.OnUpdateFoveationPattern -= updateFoveationPattern;
+        //_foveatedRenderer.OnUpdateGazeLocation -= updateGazeLocation;
     }
 
     // handle OCSVRWorksCameraRig events

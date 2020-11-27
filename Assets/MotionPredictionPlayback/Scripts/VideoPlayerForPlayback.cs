@@ -16,8 +16,8 @@ public class VideoPlayerForPlayback : MonoBehaviour {
         _videoPlayer.Pause();
     }
 
-    public void OnPlayPreview(float motionDataFps) {
-        _videoPlayer.playbackSpeed = 60.0f / motionDataFps;
+    public void OnPlayPreview(float startFrom) {
+        _videoPlayer.playbackSpeed = 1; // 60.0f; /// 72.0f; // motionDataFps;
 
         _videoPlayer.Play();
     }
@@ -31,7 +31,9 @@ public class VideoPlayerForPlayback : MonoBehaviour {
         _videoPlayer.frame = 0;
     }
 
-    public void OnSeek(float secs) {
-        _videoPlayer.frame = (long)(secs * _videoPlayer.frameRate);
+    public void OnSeek(float startFrom) {
+        //_videoPlayer.frame = (long)(secs * _videoPlayer.frameRate);
+
+        _videoPlayer.frame = (int)(_videoPlayer.frameCount * startFrom);
     }
 }

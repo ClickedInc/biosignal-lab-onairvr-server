@@ -37,6 +37,8 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     private List<OCSVRWorksFoveatedRenderer> _foveatedRenderer;
     private float _foveationPatternScale = 1.0f;
     private float _foveationPatternAspect = 1.0f;
+    private GazeLocation _leftGazeLocation = new GazeLocation();
+    private GazeLocation _rightGazeLocation = new GazeLocation();
 
     [SerializeField] private float _patternInnerRadii = 0.25f;
     [SerializeField] private float _patternMiddleRadii = 0.35f;
@@ -47,8 +49,11 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     public delegate void UpdateFoveationPatternHandler(OCSVRWorksCameraRig cameraRig);
     public delegate void UpdateGazeLocationHandler(OCSVRWorksCameraRig cameraRig);
 
-    public event UpdateFoveationPatternHandler OnUpdateFoveationPattern;
-    public event UpdateGazeLocationHandler OnUpdateGazeLocation;
+    public float innerRadii => _patternInnerRadii;
+    public float midRadii => _patternMiddleRadii;
+
+    //public event UpdateFoveationPatternHandler OnUpdateFoveationPattern;
+    //public event UpdateGazeLocationHandler OnUpdateGazeLocation;
 
     public void UpdateFoveationPattern(float scale, float aspect) {
         _foveationPatternScale = scale;
@@ -60,7 +65,9 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     }
 
     public void UpdateGazeLocation(GazeLocation left, GazeLocation right) {
-        ocs_VRWorks_UpdateStereoGazeLocation(left, right);
+        //ocs_VRWorks_UpdateStereoGazeLocation(left, right);
+        _leftGazeLocation = left;
+        _rightGazeLocation = right;
     }
 
     private void Awake() {
@@ -101,7 +108,7 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     private void LateUpdate() {
         if (_foveatedRenderer == null) { return; }
 
-        OnUpdateFoveationPattern?.Invoke(this);
+        //OnUpdateFoveationPattern?.Invoke(this);
 
         ocs_VRWorks_UpdateFoveationPattern(new FoveationPattern {
             innerRadiiH = _patternInnerRadii * _foveationPatternScale * _foveationPatternAspect,
@@ -112,11 +119,12 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
             outerRadiiV = DefaultPatternOuterRadii * _foveationPatternScale
         });
 
-        if (OnUpdateGazeLocation != null) {
-            ocs_VRWorks_BeginUpdateGazeLocation();
-            OnUpdateGazeLocation.Invoke(this);
-            ocs_VRWorks_EndUpdateGazeLocation();
-        }
+        //if (OnUpdateGazeLocation != null) {
+        ocs_VRWorks_BeginUpdateGazeLocation();
+        //OnUpdateGazeLocation.Invoke(this);
+        ocs_VRWorks_UpdateStereoGazeLocation(_leftGazeLocation, _rightGazeLocation);
+        ocs_VRWorks_EndUpdateGazeLocation();
+        //}
     }
 
     private void OnDisable() {

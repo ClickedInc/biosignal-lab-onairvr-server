@@ -21,52 +21,55 @@ public class MotionPredictionPlayback : MonoBehaviour {
     public bool playbackModeStartedByEditor;
 
     private void Awake() {
-        if (playbackModeStartedByEditor == false) {
-            return;
-        }
+        //if (playbackModeStartedByEditor == false) {
+        //    return;
+        //}
 
-        var cameraRig = GetComponentInChildren<AirVRStereoCameraRig>();
-        if (cameraRig == null) {
-            throw new UnityException("[MotionPredictionPlayback] ERROR: There must exist an instance of AirVRStereoCameraRig in children.");
-        }
+        //var cameraRig = GetComponentInChildren<AirVRStereoCameraRig>();
+        //if (cameraRig == null) {
+        //    throw new UnityException("[MotionPredictionPlayback] ERROR: There must exist an instance of AirVRStereoCameraRig in children.");
+        //}
 
-        cameraRig.gameObject.SetActive(false);
+        //cameraRig.gameObject.SetActive(false);
 
         if (AirVRServer.isInstantiated) {
             throw new UnityException("[MotionPredictionPlayback] ERROR: MotionPredictionPlayback script must be executed before AirVRCameraRig. Please adjust script execution order in the project settings.");
         }
 
-        var playbackCamera = Instantiate(Resources.Load("PlaybackCamera") as GameObject, cameraRig.transform.parent);
-        playbackCamera.transform.position = cameraRig.transform.position;
+        //var playbackCamera = Instantiate(Resources.Load("PlaybackCamera") as GameObject, cameraRig.transform.parent);
+        //playbackCamera.transform.position = cameraRig.transform.position;
+        //var playbackCamera = GetComponentInChildren<MotionPredictionPlayback>
 
-        if (FindObjectOfType<AudioListener>() == null) {
-            playbackCamera.AddComponent<AudioListener>();
-        }
+        //if (FindObjectOfType<AudioListener>() == null) {
+        //    playbackCamera.AddComponent<AudioListener>();
+        //}
 
-        _playbackCamera = playbackCamera.GetComponent<MotionPredictionPlaybackCamera>();
+        _playbackCamera = GetComponentInChildren<MotionPredictionPlaybackCamera>();
     }
 
     private void Start() {
-        if (playbackModeStartedByEditor == false) {
-            return;
-        }
+        //if (playbackModeStartedByEditor == false) {
+        //    return;
+        //}
 
         _playbackCamera.PlaybackStateChanged += playbackStateChanged;
         _playbackCamera.PlaybackCaptured += playbackCaptured;
+        _playbackCamera.PlaybackSeek += playbackSeek;
     }
 
     private void OnDestroy() {
-        if (playbackModeStartedByEditor == false) {
-            return;
-        }
+        //if (playbackModeStartedByEditor == false) {
+        //    return;
+        //}
 
         _playbackCamera.PlaybackStateChanged -= playbackStateChanged;
         _playbackCamera.PlaybackCaptured -= playbackCaptured;
+        _playbackCamera.PlaybackSeek -= playbackSeek;
     }
 
     private void playbackStateChanged(MotionPredictionPlaybackCamera sender, MotionPredictionPlaybackCamera.PlaybackState state) {
         if (state == MotionPredictionPlaybackCamera.PlaybackState.Playing) {
-            onPlayPreview.Invoke(_playbackCamera.MotionDataFps);
+            onPlayPreview.Invoke(_playbackCamera.playbackFrom);
         }
         else if (state == MotionPredictionPlaybackCamera.PlaybackState.Capturing) {
             onStartCapture.Invoke();
@@ -78,5 +81,9 @@ public class MotionPredictionPlayback : MonoBehaviour {
 
     private void playbackCaptured(MotionPredictionPlaybackCamera sender, int frame) {
         onSeek.Invoke(frame / _playbackCamera.MotionDataFps);
+    }
+
+    private void playbackSeek(MotionPredictionPlaybackCamera sender, float startFrom) {
+        onSeek.Invoke(startFrom);
     }
 }

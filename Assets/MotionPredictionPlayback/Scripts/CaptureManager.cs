@@ -17,6 +17,7 @@ public class CaptureManager : MonoBehaviour {
         return Path.Combine(path, filename);
     }
 
+    private Canvas _canvas;
     private MotionPredictionPlaybackCamera _playbackCamera;
     private string _path;
     private RenderTexture _captureTargetTexture;
@@ -84,6 +85,7 @@ public class CaptureManager : MonoBehaviour {
     private Dropdown _playbackMode;
 
     private void Awake() {
+        _canvas = GetComponentInChildren<Canvas>();
         _textInputMotionData = transform.Find("Canvas/Panel/InputMotionData/Value").GetComponent<Text>();
         _textCaptureOutputPath = transform.Find("Canvas/Panel/CaptureOutputPath/Value").GetComponent<Text>();
         _buttonPlay = transform.Find("Canvas/Panel/Play").GetComponent<Button>();
@@ -91,6 +93,12 @@ public class CaptureManager : MonoBehaviour {
         _buttonCapture = transform.Find("Canvas/Panel/Capture").GetComponent<Button>();
         _textButtonCapture = transform.Find("Canvas/Panel/Capture/Text").GetComponent<Text>();
         _playbackMode = transform.Find("Canvas/Panel/PlaybackMode/Dropdown").GetComponent<Dropdown>();
+    }
+
+    private void Update() {
+        if (Input.GetKeyDown(KeyCode.S)) {
+            _canvas.gameObject.SetActive(!_canvas.gameObject.activeSelf);
+        }
     }
 
     public void SetPlaybackMode(bool isMotionData)

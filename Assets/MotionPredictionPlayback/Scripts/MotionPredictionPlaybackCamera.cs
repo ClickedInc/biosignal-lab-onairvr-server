@@ -6,6 +6,12 @@ using UnityEngine;
 using UnityEditor;
 
 public class MotionPredictionPlaybackCamera : MonoBehaviour {
+    private const float CaptureViewScale = 2.0f;
+
+    public enum Overfilling {
+        None,
+        Optimal
+    }
 
     public class MatrixArray
     {
@@ -13,6 +19,15 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         public float right;
         public float bottom;
         public float top;
+
+        public MatrixArray() { }
+
+        public MatrixArray(float l, float t, float r, float b) {
+            left = l;
+            top = t;
+            right = r;
+            bottom = b;
+        }
 
         public void ChangeElement(float left, float right, float bottom, float top)
         {
@@ -23,7 +38,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         }
     }
 
-    private const float RESOLUTION = 1920f / 1080f;
+    private const float RESOLUTION = 2f; //1920f / 1080f;
 
     private double startTime;
     private int playbackRangeFrom = 0;
@@ -44,6 +59,14 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     private Camera rightCaptureCamera;
     private Transform rightTargetTextureAnchor;
     private Transform rightTargetTexture;
+
+    private OCSVRWorksCameraRig _foveatedRenderer;
+    private RenderPerfGraph _renderPerfGraph;
+
+    [SerializeField] private Overfilling _overfilling = Overfilling.None;
+    [SerializeField] private MeshRenderer _leftVideoTexture;
+
+    public float playbackFrom => playbackRangeFrom / 12800.0f;
 
     public enum PlaybackState {
         Stopped,
@@ -71,21 +94,20 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
         Time.captureFramerate = 60;
 
-        GameObject captureModule = Instantiate(Resources.Load("CaptureModule") as GameObject);
-        captureManager = captureModule.GetComponent<CaptureManager>();
-        leftPreviewCamera = captureModule.transform.Find("LeftSide/Camera").GetComponent<Camera>();
-        leftCaptureCamera = captureModule.transform.Find("LeftSide/Camera/CaptureCamera").GetComponent<Camera>();
-        leftTargetTextureAnchor = captureModule.transform.Find("LeftSide/Anchor");
-        leftTargetTexture = captureModule.transform.Find("LeftSide/Anchor/TargetTexture");
-        rightPreviewCamera = captureModule.transform.Find("RightSide/Camera").GetComponent<Camera>();
-        rightCaptureCamera = captureModule.transform.Find("RightSide/Camera/CaptureCamera").GetComponent<Camera>();
-        rightTargetTextureAnchor = captureModule.transform.Find("RightSide/Anchor");
-        rightTargetTexture = captureModule.transform.Find("RightSide/Anchor/TargetTexture");
+        captureManager = FindObjectOfType<CaptureManager>();
+        leftPreviewCamera = captureManager.transform.Find("LeftSide/Camera").GetComponent<Camera>();
+        leftCaptureCamera = captureManager.transform.Find("LeftSide/Camera/CaptureCamera").GetComponent<Camera>();
+        leftTargetTextureAnchor = captureManager.transform.Find("LeftSide/Anchor");
+        leftTargetTexture = captureManager.transform.Find("LeftSide/Anchor/TargetTexture");
+        rightPreviewCamera = captureManager.transform.Find("RightSide/Camera").GetComponent<Camera>();
+        rightCaptureCamera = captureManager.transform.Find("RightSide/Camera/CaptureCamera").GetComponent<Camera>();
+        rightTargetTextureAnchor = captureManager.transform.Find("RightSide/Anchor");
+        rightTargetTexture = captureManager.transform.Find("RightSide/Anchor/TargetTexture");
 
         PlayerSettings.defaultScreenWidth = 2048;
         PlayerSettings.defaultScreenHeight = 1024;
 
-        captureModule.transform.position = Vector3.down * 1000.0f;
+        captureManager.transform.position = Vector3.down * 1000.0f;
         leftPreviewCamera.aspect = rightPreviewCamera.aspect =
         leftCaptureCamera.aspect = rightCaptureCamera.aspect = 1.0f;
 
@@ -94,6 +116,9 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         playbackCameras[1].transform.localPosition = new Vector3(0.032f, 0.097f, 0.0805f);
 
         Time.timeScale = 0.0f;
+
+        _foveatedRenderer = GetComponent<OCSVRWorksCameraRig>();
+        _renderPerfGraph = FindObjectOfType<RenderPerfGraph>();
     }
 
     private void Start() {
@@ -139,6 +164,9 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
     public delegate void PlaybackCaptureHandler(MotionPredictionPlaybackCamera sender, int frame);
     public event PlaybackCaptureHandler PlaybackCaptured;
+
+    public delegate void PlaybackSeekHandler(MotionPredictionPlaybackCamera sender, float startFrom);
+    public event PlaybackSeekHandler PlaybackSeek;
 
     public void ToggleCapture()
     {
@@ -197,6 +225,8 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     public void SetPlaybackRangeFrom(int value)
     {
         playbackRangeFrom = value;
+
+        PlaybackSeek?.Invoke(this, playbackFrom);
     }
 
     public void SetPlaybackRangeTo(int value)
@@ -332,7 +362,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             double accumulatedTimeStampInterval = 0;
             int frame = 0;
 
-            while (accumulatedTimeStampInterval < 0.1f)
+            while (accumulatedTimeStampInterval < 0.07f)
             {
                 if (qf + frame >= CSVReader.lineLength - 3)
                     return;
@@ -443,11 +473,13 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         leftPreviewCamera.transform.localRotation = rightPreviewCamera.transform.localRotation = useTimeWarp ? rotationQH : rotationQF;
         leftTargetTextureAnchor.localRotation = rightTargetTextureAnchor.localRotation = rotationQF;
 
+        var overfilled = calcOverfilling(_overfilling, rotationQH, projectionQH, rotationQF);
+
         Matrix4x4 playbackCamProjectionMatrix = MatrixCalculate(
-           projectionQF.left * playbackCameras[0].nearClipPlane,
-           projectionQF.right * playbackCameras[0].nearClipPlane,
-           projectionQF.bottom * playbackCameras[0].nearClipPlane,
-           projectionQF.top * playbackCameras[0].nearClipPlane,
+           overfilled.left * playbackCameras[0].nearClipPlane,
+           overfilled.right * playbackCameras[0].nearClipPlane,
+           overfilled.bottom * playbackCameras[0].nearClipPlane,
+           overfilled.top * playbackCameras[0].nearClipPlane,
            playbackCameras[0].nearClipPlane,
            playbackCameras[0].farClipPlane
            );
@@ -470,10 +502,8 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
         rightPreviewCamera.projectionMatrix = timewarpCamProjectionMatrix;
         rightCaptureCamera.projectionMatrix = timewarpCamProjectionMatrix;
 
-        Vector2 center = new Vector2(projectionQF.left + projectionQF.right / 2, projectionQF.top + projectionQF.bottom / 2);
-
-        float rpWidth = projectionQF.right - projectionQF.left;
-        float rpHeight = projectionQF.top - projectionQF.bottom;
+        float rpWidth = overfilled.right - overfilled.left;
+        float rpHeight = overfilled.top - overfilled.bottom;
 
         float epWidth = 2 * RESOLUTION;
         float epHeight = 2 * RESOLUTION;
@@ -491,15 +521,15 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
             );
 
         leftTargetTexture.localPosition = new Vector3(
-            (projectionQF.right + projectionQF.left) / 2,
-            (projectionQF.top + projectionQF.bottom) / 2,
-            1.0f
+            (overfilled.right + overfilled.left) / 2,
+            (overfilled.top + overfilled.bottom) / 2,
+            CaptureViewScale
             );
 
         rightTargetTexture.localPosition = new Vector3(
-            (projectionQF.right + projectionQF.left) / 2,
-            (projectionQF.top + projectionQF.bottom) / 2,
-            1.0f
+            (overfilled.right + overfilled.left) / 2,
+            (overfilled.top + overfilled.bottom) / 2,
+            CaptureViewScale
             );
 
         playbackCameras[0].rect = new Rect(
@@ -518,6 +548,145 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
 
         playbackCameras[0].targetTexture.Release();
         playbackCameras[1].targetTexture.Release();
+
+        ////
+
+        var originalProjHeight = projectionQH.top - projectionQH.bottom;
+        var overfillWidth = overfilled.right - overfilled.left;
+        var overfillHeight = overfilled.top - overfilled.bottom;
+        var overfillAspect = overfillWidth / overfillHeight;
+
+        var areaQH = (projectionQH.right - projectionQH.left) * (projectionQH.top - projectionQH.bottom);
+        var areaQF = (overfilled.right - overfilled.left) * (overfilled.top - overfilled.bottom);
+        var scaleAdjustment = 1.0f; // 0.9f + (areaQF / areaQH - 1.0f) * 0.4f;
+
+        _foveatedRenderer.UpdateFoveationPattern(originalProjHeight / (overfillAspect >= 1.0f ? overfillHeight : overfillWidth) * scaleAdjustment, 1.0f);
+
+        var leftProj = new Vector4 {
+            x = overfilled.left,
+            y = overfilled.top,
+            z = overfilled.right,
+            w = overfilled.bottom
+        };
+        var rightProj = new Vector4 {
+            x = leftProj.x - (projectionQH.left + projectionQH.right),
+            y = leftProj.y,
+            z = leftProj.z - (projectionQH.left + projectionQH.right),
+            w = leftProj.w
+        };
+        var width = leftProj.z - leftProj.x;
+        var height = leftProj.y - leftProj.w;
+        var scale = width / height >= 1.0f ? height : width;
+
+        var leftGaze = new OCSVRWorksCameraRig.GazeLocation {
+            x = -(leftProj.x + leftProj.z) / 2 / scale,
+            y = -(leftProj.y + leftProj.w) / 2 / scale
+        };
+        var rightGaze = new OCSVRWorksCameraRig.GazeLocation {
+            x = -(rightProj.x + rightProj.z) / 2 / scale,
+            y = -(rightProj.y + rightProj.w) / 2 / scale
+        };
+
+        _foveatedRenderer.UpdateGazeLocation(leftGaze, leftGaze);
+
+        var mat = _leftVideoTexture.sharedMaterial;
+        mat.SetFloat("_InnerRadii", _foveatedRenderer.innerRadii / 1.7f * scaleAdjustment);
+        mat.SetFloat("_MidRadii", _foveatedRenderer.midRadii / 1.7f * scaleAdjustment);
+        mat.SetFloat("_GazeX", -(overfilled.left + overfilled.right) / 4);
+        mat.SetFloat("_GazeY", -(overfilled.top + overfilled.bottom) / 4);
+        mat.SetVector("_Bound", new Vector4(-rpWidth / 2, rpHeight / 2, rpWidth / 2, -rpHeight / 2));
+
+        measureRenderPerfs(rotationQH, projectionQH, rotationQF, _foveatedRenderer.innerRadii * scaleAdjustment, _foveatedRenderer.midRadii * scaleAdjustment);
     }
 
+    private MatrixArray calcOverfilling(Overfilling overfilling, Quaternion rotationQH, MatrixArray projectionQH, Quaternion rotationQF) {
+        if (overfilling == Overfilling.Optimal) {
+            var q_delta = Quaternion.Inverse(rotationQF) * rotationQH;
+
+            var p_lt = q_delta * new Vector3(projectionQH.left, projectionQH.top, 1.0f); p_lt /= p_lt.z;
+            var p_rt = q_delta * new Vector3(projectionQH.right, projectionQH.top, 1.0f); p_rt /= p_rt.z;
+            var p_rb = q_delta * new Vector3(projectionQH.right, projectionQH.bottom, 1.0f); p_rb /= p_rb.z;
+            var p_lb = q_delta * new Vector3(projectionQH.left, projectionQH.bottom, 1.0f); p_lb /= p_lb.z;
+
+            var p_l = Mathf.Min(p_lt.x, p_rt.x, p_rb.x, p_lb.x);
+            var p_t = Mathf.Max(p_lt.y, p_rt.y, p_rb.y, p_lb.y);
+            var p_r = Mathf.Max(p_lt.x, p_rt.x, p_rb.x, p_lb.x);
+            var p_b = Mathf.Min(p_lt.y, p_rt.y, p_rb.y, p_lb.y);
+
+            return new MatrixArray(Mathf.Min(p_l, projectionQH.left),
+                                   Mathf.Max(p_t, projectionQH.top),
+                                   Mathf.Max(p_r, projectionQH.right),
+                                   Mathf.Min(p_b, projectionQH.bottom));
+        }
+        else {
+            return projectionQH;
+        }
+    }
+
+    private void measureRenderPerfs(Quaternion rotationQH, MatrixArray projectionQH, Quaternion rotationQF, float innerRadii, float midRadii) {
+        var optimal = calcOverfilling(Overfilling.Optimal, rotationQH, projectionQH, rotationQF);
+
+        var radius = (projectionQH.right - projectionQH.left) / 2;
+        var innerArea = calcRadiiArea(optimal, radius * innerRadii);
+        var midArea = calcRadiiArea(optimal, radius * midRadii);
+
+        var ideal_area = (projectionQH.right - projectionQH.left) * (projectionQH.top - projectionQH.bottom);
+        var overfilled_area = (optimal.right - optimal.left) * (optimal.top - optimal.bottom);
+        var foveated_area = innerArea + (midArea - innerArea) / 4 + (overfilled_area - midArea) / 16;
+
+        _renderPerfGraph?.AddMeasurement(ideal_area, overfilled_area, foveated_area);
+    }
+
+    private float calcRadiiArea(MatrixArray projection, float radius) {
+        var overflow_l = calcOverflowedSideArea(radius, -projection.left);
+        var overflow_t = calcOverflowedSideArea(radius, projection.top);
+        var overflow_r = calcOverflowedSideArea(radius, projection.right);
+        var overflow_b = calcOverflowedSideArea(radius, -projection.bottom);
+
+        var overflow_lt = calcOverflowedCornerArea(radius, -projection.left, projection.top);
+        var overflow_rt = calcOverflowedCornerArea(radius, projection.right, projection.top);
+        var overflow_rb = calcOverflowedCornerArea(radius, projection.right, -projection.bottom);
+        var overflow_lb = calcOverflowedCornerArea(radius, -projection.left, -projection.bottom);
+
+        return Mathf.PI * radius * radius - (overflow_l + overflow_t + overflow_r + overflow_b) + (overflow_lt + overflow_rt + overflow_rb + overflow_lb);
+     }
+
+    private float calcOverflowedSideArea(float radius, float side) {
+        var cut = Mathf.Abs(side);
+        if (cut >= radius) { return 0; }
+
+        var halfAngle = Mathf.Acos(cut / radius);
+        var sector =  halfAngle * radius * radius;
+        var segment = sector - cut * radius * Mathf.Sin(halfAngle);
+
+        if (side >= 0) {
+            return segment;
+        }
+        else {
+            return Mathf.PI * radius * radius - segment;
+        }
+    }
+
+    private float calcOverflowedCornerArea(float radius, float side, float top) {
+        if (new Vector2(side, top).magnitude >= radius) { return 0; }
+
+        var side_segment = calcOverflowedSideArea(radius, Mathf.Abs(side));
+        var top_cross = Mathf.Sqrt(radius * radius - top * top);
+        var top_cross_segment = calcOverflowedSideArea(radius, top_cross);
+
+        var corner_area = (side_segment - top_cross_segment - 2 * Mathf.Abs(top) * (top_cross - Mathf.Abs(side))) / 2;
+
+        if (side < 0 && top < 0) {
+            return Mathf.PI * radius * radius - corner_area;
+        }
+        else if (side < 0) {
+            return top_cross_segment - corner_area;
+        }
+        else if (top < 0) {
+            return side_segment - corner_area;
+        }
+        else {
+            return corner_area;
+        }
+    }
 }
