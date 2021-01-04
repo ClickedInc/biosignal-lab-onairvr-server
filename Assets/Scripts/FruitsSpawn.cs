@@ -40,7 +40,8 @@ public class FruitsSpawn : MonoBehaviour
     static public bool gameover = false;
     static public bool bound = false;
     public static float fallingSpeed;
-    public static int maximumnumberOfCuts;
+    public static int minimumNumberOfCuts;
+    public static int maximumNumberOfCuts;
     public static float targetPercent;
     public static float spawnInterval;
     public static bool usePredictiveInput;
@@ -54,9 +55,8 @@ public class FruitsSpawn : MonoBehaviour
     {
 
         fruit = Random.Range(0, 4);
-        piece = Random.Range(0, maximumnumberOfCuts);
+        piece = Random.Range(minimumNumberOfCuts, maximumNumberOfCuts);
         rg = Random.Range(0, 4);
-        Debug.Log(piece);
     }
 
     // Update is called once per frame
