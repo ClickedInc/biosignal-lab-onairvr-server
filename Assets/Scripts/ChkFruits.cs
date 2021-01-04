@@ -25,7 +25,7 @@ public class ChkFruits : MonoBehaviour
 
         if (!FruitsSpawn.gameover && !FruitsSpawn.spawn && FruitsSpawn.bound)
         {
-            if (FruitsSpawn.piece + 1 == FruitsSpawn.btCount && FruitsSpawn.fruit == FruitsSpawn.rg)
+            if (FruitsSpawn.piece == FruitsSpawn.btCount && FruitsSpawn.fruit == FruitsSpawn.rg)
             {
                 _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "cleared");
 
@@ -33,7 +33,7 @@ public class ChkFruits : MonoBehaviour
 
             }
             else if (FruitsSpawn.fruit != FruitsSpawn.rg && FruitsSpawn.btCount != 0
-                || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount != 0 && FruitsSpawn.piece + 1 != FruitsSpawn.btCount
+                || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount != 0 && FruitsSpawn.piece != FruitsSpawn.btCount
                 || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount == 0)
             {
                 _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "missed");
@@ -64,10 +64,12 @@ public class ChkFruits : MonoBehaviour
         count = 0;
         result.text = "현재점수 : " + count.ToString();
         GameObject.Find("Purpose").GetComponent<Text>().text = "";
-
+        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.numberOfCuts);
+        FruitsSpawn.fruit = Random.Range(0, 4);
         FruitsSpawn.chk = true;
         FruitsSpawn.spawn = true;
         FruitsSpawn.gameover = false;
+
     }
     void ChekingFruits()
     {
@@ -77,12 +79,14 @@ public class ChkFruits : MonoBehaviour
         if (PlayerPrefs.GetInt("Best Score", 0) < count)
         { PlayerPrefs.SetInt("Best Score", count); }
         result.text = "현재점수 : " + count.ToString();
-        FruitsSpawn.piece = Random.Range(0, 3);
+        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.numberOfCuts);
         FruitsSpawn.fruit = Random.Range(0, 4);
         FruitsSpawn.chk = true;
         Destroy(FruitsSpawn.pFruits);
         FruitsSpawn.rg = Random.Range(0, 4);
         FruitsSpawn.spawn = true;
+        Debug.Log(FruitsSpawn.piece);
+
     }
     void GameoverText()
     {

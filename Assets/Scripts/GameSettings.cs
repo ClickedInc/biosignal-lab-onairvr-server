@@ -15,6 +15,8 @@ public class GameSettings : MonoBehaviour
 
     [SerializeField]
     private bool _usePredictiveInput = true;
+    [SerializeField][Range(0, 3)]
+    private int _numberOfCuts;
 
     private void Start()
     {
@@ -22,5 +24,6 @@ public class GameSettings : MonoBehaviour
         FruitsSpawn.spawnInterval = _spawnInterval;
         FruitsSpawn.targetPercent = _targetMatchingProbability * 100;
         FruitsSpawn.usePredictiveInput = _usePredictiveInput;
+        FruitsSpawn.numberOfCuts = _numberOfCuts+1;
     }
 }
