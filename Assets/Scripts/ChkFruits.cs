@@ -79,7 +79,7 @@ public class ChkFruits : MonoBehaviour
         if (PlayerPrefs.GetInt("Best Score", 0) < count)
         { PlayerPrefs.SetInt("Best Score", count); }
         result.text = "현재점수 : " + count.ToString();
-        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.mximumnumberOfCuts);
+        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.maximumnumberOfCuts);
         FruitsSpawn.fruit = Random.Range(0, 4);
         FruitsSpawn.chk = true;
         Destroy(FruitsSpawn.pFruits);
