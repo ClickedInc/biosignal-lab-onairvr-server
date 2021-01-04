@@ -64,7 +64,7 @@ public class ChkFruits : MonoBehaviour
         count = 0;
         result.text = "현재점수 : " + count.ToString();
         GameObject.Find("Purpose").GetComponent<Text>().text = "";
-        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.numberOfCuts);
+        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.mximumnumberOfCuts);
         FruitsSpawn.fruit = Random.Range(0, 4);
         FruitsSpawn.chk = true;
         FruitsSpawn.spawn = true;
@@ -79,7 +79,7 @@ public class ChkFruits : MonoBehaviour
         if (PlayerPrefs.GetInt("Best Score", 0) < count)
         { PlayerPrefs.SetInt("Best Score", count); }
         result.text = "현재점수 : " + count.ToString();
-        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.numberOfCuts);
+        FruitsSpawn.piece = Random.Range(0, FruitsSpawn.mximumnumberOfCuts);
         FruitsSpawn.fruit = Random.Range(0, 4);
         FruitsSpawn.chk = true;
         Destroy(FruitsSpawn.pFruits);

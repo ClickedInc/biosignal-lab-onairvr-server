@@ -6,17 +6,14 @@ public class GameSettings : MonoBehaviour
 {
     [SerializeField]
     private float _spawnInterval;
-
     [SerializeField][Min(0.5f)]
     private float _gravity;
-
     [SerializeField][Range(0.25f, 1.0f)]
     private float _targetMatchingProbability;
-
     [SerializeField]
     private bool _usePredictiveInput = true;
-    [SerializeField][Range(0, 3)]
-    private int _numberOfCuts;
+    [SerializeField][Range(1, 3)]
+    private int _maximumNumberOfCuts;
 
     private void Start()
     {
@@ -24,6 +21,6 @@ public class GameSettings : MonoBehaviour
         FruitsSpawn.spawnInterval = _spawnInterval;
         FruitsSpawn.targetPercent = _targetMatchingProbability * 100;
         FruitsSpawn.usePredictiveInput = _usePredictiveInput;
-        FruitsSpawn.numberOfCuts = _numberOfCuts+1;
+        FruitsSpawn.maximumnumberOfCuts = _maximumNumberOfCuts + 1;
     }
 }
