@@ -11,13 +11,13 @@ using Random = UnityEngine.Random;
 
 public class ChkFruits : MonoBehaviour
 {
-    private AirVRStereoCameraRig _cameraRig;
+    private AirXRPredictiveCameraRig _cameraRig;
     public Text result;
     // Start is called before the first frame update
     int count = 0;
 
     private void Awake() {
-        _cameraRig = FindObjectOfType<AirVRStereoCameraRig>();
+        _cameraRig = FindObjectOfType<AirXRPredictiveCameraRig>();
     }
 
     private void Update()
@@ -27,7 +27,7 @@ public class ChkFruits : MonoBehaviour
         {
             if (FruitsSpawn.piece == FruitsSpawn.btCount && FruitsSpawn.fruit == FruitsSpawn.rg)
             {
-                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "cleared");
+                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "cleared");
 
                 ChekingFruits();
 
@@ -36,7 +36,7 @@ public class ChkFruits : MonoBehaviour
                 || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount != 0 && FruitsSpawn.piece != FruitsSpawn.btCount
                 || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount == 0)
             {
-                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "missed");
+                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "missed");
 
                 GameoverText();
                 Restart();

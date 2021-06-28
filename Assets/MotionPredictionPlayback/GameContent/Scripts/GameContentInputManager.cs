@@ -5,7 +5,7 @@ using UnityEngine.Events;
 
 public class GameContentInputManager : MonoBehaviour {
 
-    [SerializeField] private AirVRCameraRig rig;
+    [SerializeField] private AirXRCameraRig rig;
 
     [SerializeField] private UnityEvent onGetKeyDown;
     [SerializeField] private UnityEvent onGetKeyUp;
@@ -15,11 +15,11 @@ public class GameContentInputManager : MonoBehaviour {
             return;
         }
 
-        if (AirVRInput.GetDown(rig, AirVRInput.Button.RIndexTrigger))
+        if (AirXRInput.GetDown(rig, AirXRInput.Button.RIndexTrigger))
         {
             onGetKeyDown.Invoke();
         }
-        if (AirVRInput.GetUp(rig, AirVRInput.Button.RIndexTrigger))
+        if (AirXRInput.GetUp(rig, AirXRInput.Button.RIndexTrigger))
         {
             onGetKeyUp.Invoke();
         }

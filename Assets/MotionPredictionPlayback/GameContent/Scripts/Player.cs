@@ -7,7 +7,7 @@ public class Player : MonoBehaviour {
     [SerializeField] private FruitBasketAudioPlayer audioPlayer;
     [SerializeField] private GameObject dropableApple;
 
-    private AirVRStereoCameraRig cameraRig;
+    private AirVRCameraRig cameraRig;
     private bool isCatched;
     private GameObject currentDropedApple;
     private ObjectPooler dropableApplePooler;
@@ -16,7 +16,7 @@ public class Player : MonoBehaviour {
 
     private void Awake() 
     {
-        cameraRig = transform.Find("AirVRCameraRig").GetComponent<AirVRStereoCameraRig>();    
+        cameraRig = transform.Find("AirVRCameraRig").GetComponent<AirVRCameraRig>();    
     }
 
     private void Start()

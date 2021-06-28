@@ -27,7 +27,7 @@ public class FruitsSpawn : MonoBehaviour
         }
     }
 
-    [SerializeField] private AirVRStereoCameraRig rig;
+    [SerializeField] private AirXRPredictiveCameraRig rig;
     public Text mission;
     static public GameObject pFruits;
     public List<GameObject> fruits;
@@ -113,7 +113,7 @@ public class FruitsSpawn : MonoBehaviour
 
                 spawn = false;
 
-                rig.gameEventEmitter.EmitEvent(rig.gameEventEmitter.gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, GetFruitId(rg), "appear");
+                rig.gameEventEmitter.EmitEvent(rig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, GetFruitId(rg), "appear");
 
             }
             GameManager.currentTime = 0;
@@ -128,16 +128,16 @@ public class FruitsSpawn : MonoBehaviour
         var gameEventTimestamp = rig.gameEventEmitter.gameEventTimestamp;
 
         if (rig.predictedMotionProvider.GetButtonDown(false)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirVRGameEventEmitter.Type.Input, "0:0", "actual_press");
+            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "actual_press");
         }
         if (rig.predictedMotionProvider.GetButtonUp(false)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirVRGameEventEmitter.Type.Input, "0:0", "actual_release");
+            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "actual_release");
         }
         if (rig.predictedMotionProvider.GetButtonDown(true)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirVRGameEventEmitter.Type.Input, "0:0", "predicted_press");
+            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "predicted_press");
         }
         if (rig.predictedMotionProvider.GetButtonUp(true)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirVRGameEventEmitter.Type.Input, "0:0", "predicted_release");
+            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "predicted_release");
         }
 
         if (Input.GetKeyDown(KeyCode.Space) || rig.predictedMotionProvider.GetButtonDown(usePredictiveInput)) {
@@ -148,7 +148,7 @@ public class FruitsSpawn : MonoBehaviour
                 AudioPlayer.instance.PlaySliceSound();
 
                 if (btCount <= 3) {
-                    rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirVRGameEventEmitter.Type.Fruit, GetFruitId(rg), "hit");
+                    rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, GetFruitId(rg), "hit");
                 }
 
                 if (btCount == 1)

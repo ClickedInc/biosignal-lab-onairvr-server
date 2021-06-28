@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.IO;
 using UnityEngine;
 using UnityEditor;
 
@@ -171,7 +172,7 @@ public class MotionPredictionPlaybackCamera : MonoBehaviour {
     {
         csvPath = path;
 
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(path) || File.Exists(path) == false)
         {
             return;
         }

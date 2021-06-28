@@ -13,7 +13,7 @@ public class RayEventHandler : MonoBehaviour {
 
     private Ray ray;
 
-    public void Raycast(AirVRStereoCameraRig cameraRig)
+    public void Raycast(AirVRCameraRig cameraRig)
     {
         RaycastHit hit = new RaycastHit();
 

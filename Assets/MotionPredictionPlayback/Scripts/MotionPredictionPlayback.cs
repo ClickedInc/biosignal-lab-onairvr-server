@@ -25,14 +25,14 @@ public class MotionPredictionPlayback : MonoBehaviour {
             return;
         }
 
-        var cameraRig = GetComponentInChildren<AirVRStereoCameraRig>();
+        var cameraRig = GetComponentInChildren<AirVRCameraRig>();
         if (cameraRig == null) {
             throw new UnityException("[MotionPredictionPlayback] ERROR: There must exist an instance of AirVRStereoCameraRig in children.");
         }
 
         cameraRig.gameObject.SetActive(false);
 
-        if (AirVRServer.isInstantiated) {
+        if (AirXRServer.isInstantiated) {
             throw new UnityException("[MotionPredictionPlayback] ERROR: MotionPredictionPlayback script must be executed before AirVRCameraRig. Please adjust script execution order in the project settings.");
         }
 

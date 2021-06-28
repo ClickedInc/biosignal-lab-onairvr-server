@@ -38,8 +38,8 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     private float _foveationPatternScale = 1.0f;
     private float _foveationPatternAspect = 1.0f;
 
-    [SerializeField] private float _patternInnerRadii = 0.25f;
-    [SerializeField] private float _patternMiddleRadii = 0.35f;
+    [SerializeField] private float _patternInnerRadii = 1.06f;
+    [SerializeField] private float _patternMiddleRadii = 1.42f;
     [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate _shadingInnerRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1;
     [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate _shadingMiddleRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_2x2;
     [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate _shadingOuterRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_4x4;

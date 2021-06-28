@@ -28,7 +28,7 @@ public class VideoManager : MonoBehaviour
     public Vector3 dir { set; get; }
     public bool seeking { private set; get; }
 
-    private AirVRPointer pointer;
+    private AirXRPointer pointer;
     private float magnitude;
     private VideoPlayer player;
     private float progressTotal;
@@ -129,7 +129,7 @@ public class VideoManager : MonoBehaviour
     private void Awake()
     {
         player = FindObjectOfType<VideoPlayer>();
-        pointer = FindObjectOfType<AirVRPointer>();
+        pointer = FindObjectOfType<AirXRPointer>();
 
         if (!player)
         {

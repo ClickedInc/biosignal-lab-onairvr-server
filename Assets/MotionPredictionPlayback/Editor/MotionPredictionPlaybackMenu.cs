@@ -18,7 +18,7 @@ public class MotionPredictionPlaybackMenu {
         }
     }
 
-    [MenuItem("onAirVR/Motion Prediction Playback/Enter Playback Mode")]
+    [MenuItem("onAirXR/Motion Prediction Playback/Enter Playback Mode", false, 200)]
     public static void EnterPlaybackMode() {
         var playback = GameObject.FindObjectOfType<MotionPredictionPlayback>();
         if (playback == null) {
@@ -31,7 +31,7 @@ public class MotionPredictionPlaybackMenu {
         EditorApplication.isPlaying = true;
     }
 
-    [MenuItem("onAirVR/Motion Prediction Playback/Export Motion Prediction Playback...")]
+    [MenuItem("onAirXR/Motion Prediction Playback/Export Motion Prediction Playback...", false, 200)]
     public static void ExportPlugin()
     {
         string prefabfilename = "Assets/MotionPredictionPlayback";

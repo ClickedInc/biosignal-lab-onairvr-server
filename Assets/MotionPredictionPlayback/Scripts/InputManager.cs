@@ -20,13 +20,13 @@ public class InputManager : MonoBehaviour
             return;
         }
 
-        if (AirVRInput.GetDown(rig, AirVRInput.Button.Y)) {
+        if (AirXRInput.GetDown(rig, AirXRInput.Button.Y)) {
             rig.Disconnect();
             return;
         }
 
-        if (AirVRInput.GetDown(rig, AirVRInput.Button.RIndexTrigger) ||
-            AirVRInput.GetDown(rig, AirVRInput.Button.A)) {
+        if (AirXRInput.GetDown(rig, AirXRInput.Button.RIndexTrigger) ||
+            AirXRInput.GetDown(rig, AirXRInput.Button.A)) {
             if (ui.IsOnPointer())
                 return;
 

@@ -2,20 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ObjectPooler : MonoBehaviour{
+public class ObjectPooler {
 
     public List<GameObject> pool = new List<GameObject>();
-
-    public void Awake()
-    {
-        pool.Clear();
-    }
 
     public void Pool(GameObject gameObject,int num)
     {
         for (int i=0; i<num; i++)
         {
-            GameObject tmp = Instantiate(gameObject);
+            GameObject tmp = Object.Instantiate(gameObject);
             tmp.SetActive(false);
             pool.Add(tmp);
         }
