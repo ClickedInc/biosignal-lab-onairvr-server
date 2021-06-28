@@ -24,6 +24,12 @@ class AirXRServerSettingsProvider : SettingsProvider {
         public static GUIContent adaptiveFrameRate = new GUIContent("Adaptive Frame Rate");
         public static GUIContent minFrameRate = new GUIContent("Minimum Frame Rate");
         public static GUIContent bypassPrediction = new GUIContent("Bypass Prediction");
+        public static GUIContent lableEnable = new GUIContent("Enable");
+        public static GUIContent labelPatternRadii = new GUIContent("Pattern Radius");
+        public static GUIContent labelShadingRate = new GUIContent("Shading Rate");
+        public static GUIContent labelInner = new GUIContent("Inner");
+        public static GUIContent labelMiddle = new GUIContent("Middle");
+        public static GUIContent labelOuter = new GUIContent("Outer");
     }
 
     private SerializedObject _settings;
@@ -33,6 +39,12 @@ class AirXRServerSettingsProvider : SettingsProvider {
     private SerializedProperty _adaptiveFrameRate;
     private SerializedProperty _minFrameRate;
     private SerializedProperty _bypassPrediction;
+    private SerializedProperty _useFoveatedRendering;
+    private SerializedProperty _foveatedPatternInnerRadii;
+    private SerializedProperty _foveatedPatternMiddleRadii;
+    private SerializedProperty _foveatedShadingInnerRate;
+    private SerializedProperty _foveatedShadingMiddleRate;
+    private SerializedProperty _foveatedShadingOuterRate;
 
     public AirXRServerSettingsProvider(string path, SettingsScope scope = SettingsScope.Project)
         : base(path, scope) { }
@@ -52,6 +64,12 @@ class AirXRServerSettingsProvider : SettingsProvider {
         _adaptiveFrameRate = _settings.FindProperty("adaptiveFrameRate");
         _minFrameRate = _settings.FindProperty("minFrameRate");
         _bypassPrediction = _settings.FindProperty("bypassPrediction");
+        _useFoveatedRendering = _settings.FindProperty("useFoveatedRendering");
+        _foveatedPatternInnerRadii = _settings.FindProperty("foveatedPatternInnerRadii");
+        _foveatedPatternMiddleRadii = _settings.FindProperty("foveatedPatternMiddleRadii");
+        _foveatedShadingInnerRate = _settings.FindProperty("foveatedShadingInnerRate");
+        _foveatedShadingMiddleRate = _settings.FindProperty("foveatedShadingMiddleRate");
+        _foveatedShadingOuterRate = _settings.FindProperty("foveatedShadingOuterRate");
     }
 
     public override void OnGUI(string searchContext) {
@@ -65,6 +83,28 @@ class AirXRServerSettingsProvider : SettingsProvider {
 
         EditorGUILayout.LabelField("Motion Prediction", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(_bypassPrediction, Styles.bypassPrediction);
+
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField("Foveated Rendering", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(_useFoveatedRendering, Styles.lableEnable);
+
+        if (_useFoveatedRendering.boolValue) {
+            EditorGUILayout.BeginVertical("Box");
+
+            EditorGUILayout.LabelField(Styles.labelPatternRadii, EditorStyles.miniBoldLabel);
+            EditorGUILayout.PropertyField(_foveatedPatternInnerRadii, Styles.labelInner);
+            EditorGUILayout.PropertyField(_foveatedPatternMiddleRadii, Styles.labelMiddle);
+
+            EditorGUILayout.Space();
+
+            EditorGUILayout.LabelField(Styles.labelShadingRate, EditorStyles.miniBoldLabel);
+            EditorGUILayout.PropertyField(_foveatedShadingInnerRate, Styles.labelInner);
+            EditorGUILayout.PropertyField(_foveatedShadingMiddleRate, Styles.labelMiddle);
+            EditorGUILayout.PropertyField(_foveatedShadingOuterRate, Styles.labelOuter);
+
+            EditorGUILayout.EndVertical();
+        }
 
         _settings.ApplyModifiedProperties();
     }

@@ -23,6 +23,12 @@ public class AirXRServerSettings : ScriptableObject {
     [SerializeField] [Range(10, 120)] private int minFrameRate = 10;
 
     [SerializeField] private bool bypassPrediction = false;
+    [SerializeField] private bool useFoveatedRendering = true;
+    [SerializeField] private float foveatedPatternInnerRadii = 1.06f;
+    [SerializeField] private float foveatedPatternMiddleRadii = 1.42f;
+    [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate foveatedShadingInnerRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1;
+    [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate foveatedShadingMiddleRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_2x2;
+    [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate foveatedShadingOuterRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_4x4;
 
     // overridable by command line args only
     [SerializeField] private int ampPort;
@@ -39,6 +45,12 @@ public class AirXRServerSettings : ScriptableObject {
     public string Profiler { get { return profiler; } }
 
     public bool BypassPrediction => bypassPrediction;
+    public bool UseFoveatedRendering => useFoveatedRendering;
+    public float FoveatedPatternInnerRadii => foveatedPatternInnerRadii;
+    public float FoveatedPatternMiddleRadii => foveatedPatternMiddleRadii;
+    public OCSVRWorksFoveatedRenderer.ShadingRate FoveatedShadingInnerRate => foveatedShadingInnerRate;
+    public OCSVRWorksFoveatedRenderer.ShadingRate FoveatedShadingMiddleRate => foveatedShadingMiddleRate;
+    public OCSVRWorksFoveatedRenderer.ShadingRate FoveatedShadingOuterRate => foveatedShadingOuterRate;
 
     public void ParseCommandLineArgs(string[] args) {
         Dictionary<string, string> pairs = AXRUtils.ParseCommandLine(args);

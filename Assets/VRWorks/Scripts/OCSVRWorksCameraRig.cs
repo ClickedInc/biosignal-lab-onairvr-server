@@ -34,15 +34,10 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     [DllImport(OCSVRWorks.LibName)]
     private extern static void ocs_VRWorks_EndUpdateGazeLocation();
 
+    private AirXRServerSettings _settings;
     private List<OCSVRWorksFoveatedRenderer> _foveatedRenderer;
     private float _foveationPatternScale = 1.0f;
     private float _foveationPatternAspect = 1.0f;
-
-    [SerializeField] private float _patternInnerRadii = 1.06f;
-    [SerializeField] private float _patternMiddleRadii = 1.42f;
-    [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate _shadingInnerRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1;
-    [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate _shadingMiddleRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_2x2;
-    [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate _shadingOuterRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_4x4;
 
     public delegate void UpdateFoveationPatternHandler(OCSVRWorksCameraRig cameraRig);
     public delegate void UpdateGazeLocationHandler(OCSVRWorksCameraRig cameraRig);
@@ -64,10 +59,19 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     }
 
     private void Awake() {
+        _settings = Resources.Load<AirXRServerSettings>("AirXRServerSettings");
+        if (_settings == null) {
+            _settings = ScriptableObject.CreateInstance<AirXRServerSettings>();
+        }
+
+        if (_settings.UseFoveatedRendering == false) { return; }
+
         OCSVRWorks.LoadOnce();
     }
 
     private void OnEnable() {
+        if (_settings.UseFoveatedRendering == false) { return; }
+
         var ret = ocs_VRWorks_InitFoveatedRendering();
         if (ret != 0) {
             Debug.LogWarning("[WARNING] failed to init foveated rendering: " + ret);
@@ -75,9 +79,9 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
         }
 
         ocs_VRWorks_UpdateFoveationShadingRates(new ShadingRates {
-            inner = _shadingInnerRate,
-            middle = _shadingMiddleRate,
-            outer = _shadingOuterRate
+            inner = _settings.FoveatedShadingInnerRate,
+            middle = _settings.FoveatedShadingMiddleRate,
+            outer = _settings.FoveatedShadingOuterRate
         });
 
         if (_foveatedRenderer == null) {
@@ -104,10 +108,10 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
         OnUpdateFoveationPattern?.Invoke(this);
 
         ocs_VRWorks_UpdateFoveationPattern(new FoveationPattern {
-            innerRadiiH = _patternInnerRadii * _foveationPatternScale * _foveationPatternAspect,
-            innerRadiiV = _patternInnerRadii * _foveationPatternScale,
-            middleRadiiH = _patternMiddleRadii * _foveationPatternScale * _foveationPatternAspect,
-            middleRadiiV = _patternMiddleRadii * _foveationPatternScale,
+            innerRadiiH = _settings.FoveatedPatternInnerRadii * _foveationPatternScale * _foveationPatternAspect,
+            innerRadiiV = _settings.FoveatedPatternInnerRadii * _foveationPatternScale,
+            middleRadiiH = _settings.FoveatedPatternMiddleRadii * _foveationPatternScale * _foveationPatternAspect,
+            middleRadiiV = _settings.FoveatedPatternMiddleRadii * _foveationPatternScale,
             outerRadiiH = DefaultPatternOuterRadii * _foveationPatternScale * _foveationPatternAspect,
             outerRadiiV = DefaultPatternOuterRadii * _foveationPatternScale
         });
