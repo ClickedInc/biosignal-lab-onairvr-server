@@ -1,0 +1,102 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEditor;
+
+public class MPPUIOverlay : MonoBehaviour {
+    private MotionPredictionPlayback _owner;
+    private Text _textInputMotionData;
+    private Text _textCaptureOutputPath;
+    private Button _buttonPlay;
+    private Text _labelButtonPlay;
+    private Button _buttonCapture;
+    private Text _labelButtonCapture;
+    private Dropdown _playbackMode;
+
+    public void NotifyMotionDataLoaded(MPPMotionDataReader motionData) {
+        _textInputMotionData.text = Path.GetFileName(motionData.filepath);
+
+        var options = new List<string> {
+            "Predict_NoTimeWarp",
+            "Predict_TimeWarp"
+        };
+
+        if (motionData.type == MPPMotionDataReader.Type.Raw) {
+            options.Add("NotPredict_NoTimeWarp");
+            options.Add("NotPredict_TimeWarp");
+        }
+
+        _playbackMode.ClearOptions();
+        _playbackMode.AddOptions(options);
+
+        _playbackMode.SetValueWithoutNotify((int)_owner.playbackMode);
+    }
+
+    public void NotifyCaptureOutputPathSet(string path) {
+        _textCaptureOutputPath.text = Path.GetFileName(path);
+    }
+
+    private void Awake() {
+        _owner = GetComponentInParent<MotionPredictionPlayback>();
+
+        var panel = transform.Find("Panel");
+        _textInputMotionData = panel.Find("InputMotionData/Value").GetComponent<Text>();
+        _textCaptureOutputPath = panel.Find("CaptureOutputPath/Value").GetComponent<Text>();
+        _buttonPlay = panel.Find("Play").GetComponent<Button>();
+        _labelButtonPlay = _buttonPlay.transform.Find("Text").GetComponent<Text>();
+        _buttonCapture = panel.Find("Capture").GetComponent<Button>();
+        _labelButtonCapture = _buttonCapture.transform.Find("Text").GetComponent<Text>();
+        _playbackMode = panel.Find("PlaybackMode/Dropdown").GetComponent<Dropdown>();
+    }
+
+    private void Update() {
+        updateElements();
+    }
+
+    private void updateElements() {
+        _buttonPlay.interactable = _owner.playbackState != MotionPredictionPlayback.PlaybackState.Capturing;
+        _labelButtonPlay.text = _owner.playbackState == MotionPredictionPlayback.PlaybackState.Playing ? "Stop" : "Play";
+
+        _buttonCapture.interactable = _owner.playbackState != MotionPredictionPlayback.PlaybackState.Playing;
+        _labelButtonCapture.text = _owner.playbackState == MotionPredictionPlayback.PlaybackState.Capturing ? "Stop" : "Capture";
+    }
+
+    // handle ui events
+    public void OnBrowseInputMotionDataFile() {
+        var lastOpenedFile = PlayerPrefs.GetString(MotionPredictionPlayback.PrefKeyInputMotionDataFile, "Assets/onAirXR/MotionPredictionPlayback/sample.csv");
+        var path = EditorUtility.OpenFilePanel("Select a motion data file...", Path.GetDirectoryName(lastOpenedFile), "csv");
+        if (string.IsNullOrEmpty(path)) { return; }
+
+        _owner.OnLoadInputMotionDataFile(path);
+    }
+
+    public void OnBrowseCaptureOutputPath() {
+        var lastOpenedPath = PlayerPrefs.GetString(MotionPredictionPlayback.PrefKeyCaptureOutputPath, ".");
+        var path = EditorUtility.OpenFolderPanel("Select a folder to save capture output...", Path.GetDirectoryName(lastOpenedPath), "");
+        if (string.IsNullOrEmpty(path)) { return; }
+
+        _owner.OnSetCaptureOutputPath(path);
+    }
+
+    public void OnChangePlaybackMode(int mode) {
+        _owner.OnSetPlaybackMode((MotionPredictionPlayback.PlaybackMode)mode);
+    }
+
+    public void OnChangePlaybackRangeFrom(string value) {
+        _owner.OnSetPlaybackRangeFrom(int.TryParse(value, out int val) && val > 0 ? val : 0);
+    }
+
+    public void OnChangePlaybackRangeTo(string value) {
+        _owner.OnSetPlaybackRangeTo(int.TryParse(value, out int val) && val > 0 ? val : int.MaxValue);
+    }
+
+    public void OnPlayButtonClicked() {
+        _owner.OnTogglePlay();
+    }
+
+    public void OnCaptureButtonClicked() {
+        _owner.OnToggleCapture();
+    }
+}

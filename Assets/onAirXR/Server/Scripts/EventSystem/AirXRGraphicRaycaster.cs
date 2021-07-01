@@ -192,6 +192,8 @@ public class AirXRGraphicRaycaster : GraphicRaycaster {
     // overrides GraphicRaycaster
     public override Camera eventCamera {
         get {
+            if (AirXRPointer.pointers.Count == 0) { return null; }
+
             return AirXRPointer.pointers[0].cameraRig.cameras[0];
         }
     }

@@ -81,11 +81,6 @@ class AirXRServerSettingsProvider : SettingsProvider {
 
         EditorGUILayout.Space();
 
-        EditorGUILayout.LabelField("Motion Prediction", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(_bypassPrediction, Styles.bypassPrediction);
-
-        EditorGUILayout.Space();
-
         EditorGUILayout.LabelField("Foveated Rendering", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(_useFoveatedRendering, Styles.lableEnable);
 
@@ -105,6 +100,17 @@ class AirXRServerSettingsProvider : SettingsProvider {
 
             EditorGUILayout.EndVertical();
         }
+
+        EditorGUILayout.Space();
+
+        EditorGUILayout.BeginVertical("Box");
+        {
+            EditorGUILayout.LabelField("For Development", EditorStyles.boldLabel);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(_bypassPrediction, Styles.bypassPrediction);
+        }
+        EditorGUILayout.EndVertical();
 
         _settings.ApplyModifiedProperties();
     }
