@@ -32,9 +32,8 @@ public class MotionPredictionPlaybackMenu {
     }
 
     [MenuItem("onAirXR/Motion Prediction Playback/Export Motion Prediction Playback...", false, 200)]
-    public static void ExportPlugin()
-    {
-        string prefabfilename = "Assets/MotionPredictionPlayback";
+    public static void ExportPlugin() {
+        string folder = "Assets/onAirXR/MotionPredictionPlayback";
 
         string exportPath = EditorUtility.SaveFilePanel("Export MotionPredictionPlayback plugin", "", "MotionPredictionPlayback", "unitypackage");
         if (string.IsNullOrEmpty(exportPath)) {
@@ -42,8 +41,7 @@ public class MotionPredictionPlaybackMenu {
             return;
         }
 
-        AssetDatabase.ExportPackage(prefabfilename, exportPath,
-        ExportPackageOptions.IncludeDependencies | ExportPackageOptions.Recurse);
+        AssetDatabase.ExportPackage(folder, exportPath, ExportPackageOptions.IncludeDependencies | ExportPackageOptions.Recurse);
 
         EditorUtility.DisplayDialog("Congratulation!", "The package is exported successfully.", "OK");
     }

@@ -113,7 +113,9 @@ public class FruitsSpawn : MonoBehaviour
 
                 spawn = false;
 
-                rig.gameEventEmitter.EmitEvent(rig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, GetFruitId(rg), "appear");
+                if (rig.gameEventEmitter != null) {
+                    rig.gameEventEmitter.EmitEvent(rig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, GetFruitId(rg), "appear");
+                }
 
             }
             GameManager.currentTime = 0;
@@ -125,22 +127,22 @@ public class FruitsSpawn : MonoBehaviour
 
         }
 
-        var gameEventTimestamp = rig.gameEventEmitter.gameEventTimestamp;
+        var gameEventTimestamp = rig.gameEventEmitter?.gameEventTimestamp ?? 0;
 
-        if (rig.predictedMotionProvider.GetButtonDown(false)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "actual_press");
+        if (rig.predictedMotionProvider?.GetButtonDown(false) ?? false) {
+            rig.gameEventEmitter?.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "actual_press");
         }
-        if (rig.predictedMotionProvider.GetButtonUp(false)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "actual_release");
+        if (rig.predictedMotionProvider?.GetButtonUp(false) ?? false) {
+            rig.gameEventEmitter?.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "actual_release");
         }
-        if (rig.predictedMotionProvider.GetButtonDown(true)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "predicted_press");
+        if (rig.predictedMotionProvider?.GetButtonDown(true) ?? false) {
+            rig.gameEventEmitter?.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "predicted_press");
         }
-        if (rig.predictedMotionProvider.GetButtonUp(true)) {
-            rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "predicted_release");
+        if (rig.predictedMotionProvider?.GetButtonUp(true) ?? false) {
+            rig.gameEventEmitter?.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Input, "0:0", "predicted_release");
         }
 
-        if (Input.GetKeyDown(KeyCode.Space) || rig.predictedMotionProvider.GetButtonDown(usePredictiveInput)) {
+        if (Input.GetKeyDown(KeyCode.Space) || (rig.predictedMotionProvider?.GetButtonDown(usePredictiveInput) ?? false)) {
             if (!gameover && !spawn && !bound)
             {
                 
@@ -148,7 +150,7 @@ public class FruitsSpawn : MonoBehaviour
                 AudioPlayer.instance.PlaySliceSound();
 
                 if (btCount <= 3) {
-                    rig.gameEventEmitter.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, GetFruitId(rg), "hit");
+                    rig.gameEventEmitter?.EmitEvent(gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, GetFruitId(rg), "hit");
                 }
 
                 if (btCount == 1)

@@ -7,6 +7,8 @@ using UnityEditor;
 
 public class MPPUIOverlay : MonoBehaviour {
     private MotionPredictionPlayback _owner;
+    private Image _panelPlayback;
+    private Image _panelLive;
     private Text _textInputMotionData;
     private Text _textCaptureOutputPath;
     private Button _buttonPlay;
@@ -14,24 +16,36 @@ public class MPPUIOverlay : MonoBehaviour {
     private Button _buttonCapture;
     private Text _labelButtonCapture;
     private Dropdown _playbackMode;
+    private Dropdown _liveMode;
 
-    public void NotifyMotionDataLoaded(MPPMotionDataReader motionData) {
-        _textInputMotionData.text = Path.GetFileName(motionData.filepath);
+    public void NotifyMotionDataProviderLoaded(MPPMotionDataProvider motionData) {
+        if (motionData is MPPMotionDataFile motionDataFile) {
+            _panelPlayback.gameObject.SetActive(true);
+            _panelLive.gameObject.SetActive(false);
 
-        var options = new List<string> {
-            "Predict_NoTimeWarp",
-            "Predict_TimeWarp"
-        };
+            _textInputMotionData.text = Path.GetFileName(motionDataFile.filepath);
 
-        if (motionData.type == MPPMotionDataReader.Type.Raw) {
-            options.Add("NotPredict_NoTimeWarp");
-            options.Add("NotPredict_TimeWarp");
+            var options = new List<string> {
+                "Predict_NoTimeWarp",
+                "Predict_TimeWarp"
+            };
+
+            if (motionDataFile.type == MPPMotionDataFile.Type.Raw) {
+                options.Add("NotPredict_NoTimeWarp");
+                options.Add("NotPredict_TimeWarp");
+            }
+
+            _playbackMode.ClearOptions();
+            _playbackMode.AddOptions(options);
+
+            _playbackMode.SetValueWithoutNotify((int)_owner.playbackMode);
         }
+        else {
+            _panelLive.gameObject.SetActive(true);
+            _panelPlayback.gameObject.SetActive(false);
 
-        _playbackMode.ClearOptions();
-        _playbackMode.AddOptions(options);
-
-        _playbackMode.SetValueWithoutNotify((int)_owner.playbackMode);
+            _playbackMode.SetValueWithoutNotify((int)_owner.playbackMode);
+        }
     }
 
     public void NotifyCaptureOutputPathSet(string path) {
@@ -41,14 +55,25 @@ public class MPPUIOverlay : MonoBehaviour {
     private void Awake() {
         _owner = GetComponentInParent<MotionPredictionPlayback>();
 
-        var panel = transform.Find("Panel");
-        _textInputMotionData = panel.Find("InputMotionData/Value").GetComponent<Text>();
-        _textCaptureOutputPath = panel.Find("CaptureOutputPath/Value").GetComponent<Text>();
-        _buttonPlay = panel.Find("Play").GetComponent<Button>();
+        _panelPlayback = transform.Find("Playback").GetComponent<Image>();
+        _textInputMotionData = _panelPlayback.transform.Find("InputMotionData/Value").GetComponent<Text>();
+        _textCaptureOutputPath = _panelPlayback.transform.Find("CaptureOutputPath/Value").GetComponent<Text>();
+        _buttonPlay = _panelPlayback.transform.Find("Play").GetComponent<Button>();
         _labelButtonPlay = _buttonPlay.transform.Find("Text").GetComponent<Text>();
-        _buttonCapture = panel.Find("Capture").GetComponent<Button>();
+        _buttonCapture = _panelPlayback.transform.Find("Capture").GetComponent<Button>();
         _labelButtonCapture = _buttonCapture.transform.Find("Text").GetComponent<Text>();
-        _playbackMode = panel.Find("PlaybackMode/Dropdown").GetComponent<Dropdown>();
+        _playbackMode = _panelPlayback.transform.Find("Mode/Dropdown").GetComponent<Dropdown>();
+
+        _panelLive = transform.Find("Live").GetComponent<Image>();
+        _liveMode = _panelLive.transform.Find("Mode/Dropdown").GetComponent<Dropdown>();
+
+        _liveMode.ClearOptions();
+        _liveMode.AddOptions(new List<string> {
+            "Predict_NoTimeWarp",
+            "Predict_TimeWarp",
+            "NotPredict_NoTimeWarp",
+            "NotPredict_TimeWarp"
+        });
     }
 
     private void Update() {

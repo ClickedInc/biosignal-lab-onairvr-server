@@ -8,22 +8,25 @@ public class AirXRPredictedMotionProvider {
     private AirXRPredictiveCameraRig _owner;
     private NetMQ.Msg _msgRecv;
     private PullSocket _zmqPredictedMotion;
-
-    private float _predictionTime;
+    private MPPLiveMotionDataProvider _motionDataProvider;
     private bool _prevExternalInputActualPress;
     private bool _prevExternalInputPredictivePress;
 
     public long timestamp { get; private set; }
+    public float predictionTime { get; private set; }
     public Rect projection { get; private set; }
     public Pose leftEye { get; private set; }
     public Pose rightEye { get; private set; }
+    public float foveationInnerRadius { get; private set; }
+    public float foveationMiddleRadius { get; private set; }
     public Pose rightHand { get; private set; }
     public ushort externalInputId { get; private set; }
     public bool externalInputActualPress { get; private set; }
     public bool externalInputPredictivePress { get; private set; }
 
-    public AirXRPredictedMotionProvider(AirXRPredictiveCameraRig owner) {
+    public AirXRPredictedMotionProvider(AirXRPredictiveCameraRig owner, MPPLiveMotionDataProvider motionDataProvider) {
         _owner = owner;
+        _motionDataProvider = motionDataProvider;
     }
 
     public void Connect(string endpoint) {
@@ -54,14 +57,20 @@ public class AirXRPredictedMotionProvider {
 
             if (BitConverter.IsLittleEndian) {
                 Array.Reverse(_msgRecv.Data, 0, 8);
-                for (int i = 0; i < 22; i++) {
+                for (int i = 0; i < 45; i++) {
                     Array.Reverse(_msgRecv.Data, 8 + i * 4, 4);
                 }
             }
 
             int pos = 0;
             timestamp = getLong(_msgRecv.Data, ref pos);
-            _predictionTime = getFloat(_msgRecv.Data, ref pos);
+            predictionTime = getFloat(_msgRecv.Data, ref pos);
+
+            var inputLeftEyePosition = getPosition(_msgRecv.Data, ref pos);
+            var inputRightEyePosition = getPosition(_msgRecv.Data, ref pos);
+            var inputHeadOrientation = getRotation(_msgRecv.Data, ref pos);
+            var inputProjection = getProjection(_msgRecv.Data, ref pos);
+            var inputRightHandPose = new Pose(getPosition(_msgRecv.Data, ref pos), getRotation(_msgRecv.Data, ref pos));
 
             var leftEyePosition = getPosition(_msgRecv.Data, ref pos);
             var rightEyePosition = getPosition(_msgRecv.Data, ref pos);
@@ -71,6 +80,9 @@ public class AirXRPredictedMotionProvider {
             rightEye = new Pose(rightEyePosition, headOrientation);
 
             projection = getProjection(_msgRecv.Data, ref pos);
+
+            foveationInnerRadius = getFloat(_msgRecv.Data, ref pos);
+            foveationMiddleRadius = getFloat(_msgRecv.Data, ref pos);
 
             rightHand = new Pose(getPosition(_msgRecv.Data, ref pos), getRotation(_msgRecv.Data, ref pos));
 
@@ -85,6 +97,15 @@ public class AirXRPredictedMotionProvider {
             if (_prevExternalInputPredictivePress != predictedPress) {
                 externalInputPredictivePress = predictedPress;
             }
+
+            //var offsetX = Mathf.Sin(Time.realtimeSinceStartup) / 2;
+            //var offsetY = Mathf.Cos(Time.realtimeSinceStartup) / 2;
+            //projection = Rect.MinMaxRect(-1.0f + offsetX, -1.0f + offsetY, 1.0f + offsetX, 1.0f + offsetY);
+
+            _motionDataProvider.Put(timestamp, predictionTime,
+                                    new Pose(inputLeftEyePosition, inputHeadOrientation), new Pose(inputRightEyePosition, inputHeadOrientation),
+                                    MPPProjection.FromRect(inputProjection), inputRightHandPose,
+                                    leftEye, rightEye, MPPProjection.FromRect(projection), foveationInnerRadius, foveationMiddleRadius, rightHand);
         }
     }
 

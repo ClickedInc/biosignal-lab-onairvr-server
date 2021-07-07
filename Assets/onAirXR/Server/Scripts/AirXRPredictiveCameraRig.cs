@@ -10,22 +10,24 @@ public class AirXRPredictiveCameraRig : MonoBehaviour, AirXRCameraRigManager.Pre
     private NetMQ.Msg _msg;
     private PushSocket _zmqReportEndpoint;
 
-    private AirVRCameraRig _cameraRig;
     private OCSVRWorksCameraRig _foveatedRenderer;
 
+    public AirVRCameraRig cameraRig { get; private set; }
     public AirXRPredictedMotionProvider predictedMotionProvider { get; private set; }
     public AirXRGameEventEmitter gameEventEmitter { get; private set; }
+    public MPPLiveMotionDataProvider liveMotionProvider { get; private set; }
 
     public bool bypassPrediction => AirXRServer.settings.BypassPrediction;
 
     private void Awake() {
         _msg = new NetMQ.Msg();
 
-        _cameraRig = GetComponent<AirVRCameraRig>();
+        cameraRig = GetComponent<AirVRCameraRig>();
         _foveatedRenderer = GetComponent<OCSVRWorksCameraRig>();
 
-        predictedMotionProvider = new AirXRPredictedMotionProvider(this);
-        gameEventEmitter = new AirXRGameEventEmitter(_cameraRig);
+        liveMotionProvider = new MPPLiveMotionDataProvider();
+        predictedMotionProvider = new AirXRPredictedMotionProvider(this, liveMotionProvider);
+        gameEventEmitter = new AirXRGameEventEmitter(cameraRig);
     }
 
     private void Start() {
@@ -33,6 +35,8 @@ public class AirXRPredictiveCameraRig : MonoBehaviour, AirXRCameraRigManager.Pre
 
         _foveatedRenderer.OnUpdateFoveationPattern += updateFoveationPattern;
         _foveatedRenderer.OnUpdateGazeLocation += updateGazeLocation;
+
+        _foveatedRenderer.enabled = AirXRServer.settings.FoveatedRenderPriority == AirXRServerSettings.FoveatedRenderingPriority.StreamingFirst;
     }
 
     private void Update() {
@@ -57,23 +61,16 @@ public class AirXRPredictiveCameraRig : MonoBehaviour, AirXRCameraRigManager.Pre
 
     // handle OCSVRWorksCameraRig events
     private void updateFoveationPattern(OCSVRWorksCameraRig cameraRig) {
-        var config = _cameraRig.GetConfig();
-        if (config == null) { return; }
-
-        var originalProjHeight = config.cameraProjection[1] - config.cameraProjection[3];
         var overfillProj = predictedMotionProvider.projection;
-        var overfillWidth = overfillProj.xMax - overfillProj.xMin;
-        var overfillHeight = overfillProj.yMax - overfillProj.yMin;
-        var overfillAspect = overfillWidth / overfillHeight;
+        var overfillAspect = overfillProj.width / overfillProj.height;
 
-        var encodingSize = config.GetEncodingProjectionSize();
-        var videoAspect = config.videoWidth / 2.0f / config.videoHeight;
-
-        cameraRig.UpdateFoveationPattern(originalProjHeight / (overfillAspect >= 1.0f ? overfillHeight : overfillWidth), encodingSize.height / encodingSize.width * videoAspect);
+        cameraRig.UpdateFoveationPatternProps(predictedMotionProvider.foveationInnerRadius,
+                                              predictedMotionProvider.foveationMiddleRadius,
+                                              1 / (overfillAspect >= 1.0f ? overfillProj.height : overfillProj.width));
     }
 
     private void updateGazeLocation(OCSVRWorksCameraRig cameraRig) {
-        var config = _cameraRig.GetConfig();
+        var config = this.cameraRig.GetConfig();
         if (config == null) { return; }
 
         var leftProj = predictedMotionProvider.projection;
@@ -83,15 +80,14 @@ public class AirXRPredictiveCameraRig : MonoBehaviour, AirXRCameraRigManager.Pre
             leftProj.xMax - (config.cameraProjection[0] + config.cameraProjection[2]),
             leftProj.yMax
         );
-        var scale = leftProj.width / leftProj.height >= 1.0f ? leftProj.height : leftProj.width;
 
         var leftGaze = new OCSVRWorksCameraRig.GazeLocation {
-            x = -leftProj.center.x / scale,
-            y = -leftProj.center.y / scale
+            x = -leftProj.center.x / leftProj.width,
+            y = -leftProj.center.y / leftProj.height
         };
         var rightGaze = new OCSVRWorksCameraRig.GazeLocation {
-            x = -rightProj.center.x / scale,
-            y = -rightProj.center.y / scale
+            x = -rightProj.center.x / rightProj.width,
+            y = -rightProj.center.y / rightProj.height
         };
 
         cameraRig.UpdateGazeLocation(leftGaze, rightGaze);

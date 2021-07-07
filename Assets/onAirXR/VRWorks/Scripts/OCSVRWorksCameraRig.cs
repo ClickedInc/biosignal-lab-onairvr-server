@@ -36,8 +36,9 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
 
     private AirXRServerSettings _settings;
     private List<OCSVRWorksFoveatedRenderer> _foveatedRenderer;
-    private float _foveationPatternScale = 1.0f;
-    private float _foveationPatternAspect = 1.0f;
+    private float _patternInnerRadius = 1.06f;
+    private float _patternMiddleRadius = 1.42f;
+    private float _patternScale = 1.0f;
 
     public delegate void UpdateFoveationPatternHandler(OCSVRWorksCameraRig cameraRig);
     public delegate void UpdateGazeLocationHandler(OCSVRWorksCameraRig cameraRig);
@@ -45,9 +46,10 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
     public event UpdateFoveationPatternHandler OnUpdateFoveationPattern;
     public event UpdateGazeLocationHandler OnUpdateGazeLocation;
 
-    public void UpdateFoveationPattern(float scale, float aspect) {
-        _foveationPatternScale = scale;
-        _foveationPatternAspect = aspect;
+    public void UpdateFoveationPatternProps(float innerRadius, float middleRadius, float scale) {
+        _patternInnerRadius = innerRadius;
+        _patternMiddleRadius = middleRadius;
+        _patternScale = scale;
     }
 
     public void UpdateGazeLocation(GazeLocation mono) {
@@ -87,8 +89,8 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
         if (_foveatedRenderer == null) {
             _foveatedRenderer = new List<OCSVRWorksFoveatedRenderer>();
 
-            var leftEyeCamera = transform.Find("TrackingSpace/LeftEyeAnchor").GetComponent<Camera>();
-            var rightEyeCamera = transform.Find("TrackingSpace/RightEyeAnchor").GetComponent<Camera>();
+            var leftEyeCamera = (transform.Find("TrackingSpace/LeftEyeAnchor") ?? transform.Find("LeftEye")).GetComponent<Camera>();
+            var rightEyeCamera = (transform.Find("TrackingSpace/RightEyeAnchor") ?? transform.Find("RightEye")).GetComponent<Camera>();
 
             Assert.IsNotNull(leftEyeCamera);
             Assert.IsNotNull(rightEyeCamera);
@@ -108,12 +110,12 @@ public class OCSVRWorksCameraRig : MonoBehaviour {
         OnUpdateFoveationPattern?.Invoke(this);
 
         ocs_VRWorks_UpdateFoveationPattern(new FoveationPattern {
-            innerRadiiH = _settings.FoveatedPatternInnerRadii * _foveationPatternScale * _foveationPatternAspect,
-            innerRadiiV = _settings.FoveatedPatternInnerRadii * _foveationPatternScale,
-            middleRadiiH = _settings.FoveatedPatternMiddleRadii * _foveationPatternScale * _foveationPatternAspect,
-            middleRadiiV = _settings.FoveatedPatternMiddleRadii * _foveationPatternScale,
-            outerRadiiH = DefaultPatternOuterRadii * _foveationPatternScale * _foveationPatternAspect,
-            outerRadiiV = DefaultPatternOuterRadii * _foveationPatternScale
+            innerRadiiH = _patternInnerRadius * 2 * _patternScale,
+            innerRadiiV = _patternInnerRadius * 2 * _patternScale,
+            middleRadiiH = _patternMiddleRadius * 2 * _patternScale,
+            middleRadiiV = _patternMiddleRadius * 2 * _patternScale,
+            outerRadiiH = DefaultPatternOuterRadii * 2 * _patternScale,
+            outerRadiiV = DefaultPatternOuterRadii * 2 * _patternScale
         });
 
         if (OnUpdateGazeLocation != null) {

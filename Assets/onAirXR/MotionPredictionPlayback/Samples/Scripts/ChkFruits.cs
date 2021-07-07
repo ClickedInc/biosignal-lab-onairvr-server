@@ -27,7 +27,9 @@ public class ChkFruits : MonoBehaviour
         {
             if (FruitsSpawn.piece == FruitsSpawn.btCount && FruitsSpawn.fruit == FruitsSpawn.rg)
             {
-                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "cleared");
+                if (_cameraRig?.gameEventEmitter != null) {
+                    _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "cleared");
+                }
 
                 ChekingFruits();
 
@@ -36,7 +38,9 @@ public class ChkFruits : MonoBehaviour
                 || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount != 0 && FruitsSpawn.piece != FruitsSpawn.btCount
                 || FruitsSpawn.fruit == FruitsSpawn.rg && FruitsSpawn.btCount == 0)
             {
-                _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "missed");
+                if (_cameraRig?.gameEventEmitter != null) {
+                    _cameraRig.gameEventEmitter.EmitEvent(_cameraRig.gameEventEmitter.gameEventTimestamp, AirXRGameEventEmitter.Type.Fruit, FruitsSpawn.GetFruitId(FruitsSpawn.rg), "missed");
+                }
 
                 GameoverText();
                 Restart();

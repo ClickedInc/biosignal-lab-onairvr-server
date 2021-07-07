@@ -223,8 +223,8 @@ public sealed class AirVRCameraRig : AirXRCameraRig, IAirXRTrackingModelContext 
         leftEyeCamera.projectionMatrix = AirXRClientConfig.CalcCameraProjectionMatrix(leftRenderProj, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
         rightEyeCamera.projectionMatrix = AirXRClientConfig.CalcCameraProjectionMatrix(rightRenderProj, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
 
-        var viewport = new Rect((encodingProjection.width - renderProjection.width) / 2 / encodingProjection.width,
-                                (encodingProjection.height - renderProjection.height) / 2 / encodingProjection.height,
+        var viewport = new Rect(0.5f - renderProjection.width / encodingProjection.width / 2,
+                                0.5f - renderProjection.height / encodingProjection.height / 2, 
                                 renderProjection.width / encodingProjection.width,
                                 renderProjection.height / encodingProjection.height);
 

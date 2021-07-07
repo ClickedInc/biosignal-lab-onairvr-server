@@ -16,19 +16,37 @@ public class AirXRServerSettings : ScriptableObject {
     public const string AssetName = "AirXRServerSettings.asset";
     public const string ProjectAssetPath = "Assets/onAirXR/Server/Resources/" + AssetName;
 
+    public enum OverfillMode {
+        Predictive,
+        Optimal,
+        None
+    }
+
+    public enum FoveatedRenderingPriority {
+        StreamingFirst,
+        PlaybackFirst
+    }
+
     [SerializeField] private string license = "noncommercial.license";
     [SerializeField] private int maxClientCount = 1;
     [SerializeField] private int stapPort = 9090;
     [SerializeField] private bool adaptiveFrameRate = false;
     [SerializeField] [Range(10, 120)] private int minFrameRate = 10;
 
-    [SerializeField] private bool bypassPrediction = false;
+    [SerializeField] private bool visualizeRenderingInfo = false;
+    [SerializeField] private OverfillMode overfillMode = OverfillMode.Predictive;
     [SerializeField] private bool useFoveatedRendering = true;
-    [SerializeField] private float foveatedPatternInnerRadii = 1.06f;
-    [SerializeField] private float foveatedPatternMiddleRadii = 1.42f;
+    [SerializeField] private FoveatedRenderingPriority foveatedRenderingPriority = FoveatedRenderingPriority.StreamingFirst;
     [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate foveatedShadingInnerRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1;
     [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate foveatedShadingMiddleRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_2x2;
     [SerializeField] private OCSVRWorksFoveatedRenderer.ShadingRate foveatedShadingOuterRate = OCSVRWorksFoveatedRenderer.ShadingRate.X1_PER_4x4;
+    [SerializeField] private Color renderPerfGraphColorBasis = Color.yellow;
+    [SerializeField] private Color renderPerfGraphColorOverfillOnly = Color.green;
+    [SerializeField] private Color renderPerfGraphColorFoveatedOverfill = Color.magenta;
+    [SerializeField] private Vector2 renderPerfGraphDefaultRangeY = new Vector2(0, 3);
+    [SerializeField] private bool renderPerfGraphAutoFitRangeY = true;
+    [SerializeField] private int renderPerfGraphLength = 1000;
+    [SerializeField] private bool bypassPrediction = false;
 
     // overridable by command line args only
     [SerializeField] private int ampPort;
@@ -44,13 +62,21 @@ public class AirXRServerSettings : ScriptableObject {
     public bool LoopbackOnly { get { return loopbackOnly; } }
     public string Profiler { get { return profiler; } }
 
-    public bool BypassPrediction => bypassPrediction;
+    public bool VisualizeRenderingInfo => visualizeRenderingInfo;
+    public float PreviewRenderScale => visualizeRenderingInfo ? 2.0f : 1.0f;
+    public OverfillMode OverfillingMode => overfillMode;
     public bool UseFoveatedRendering => useFoveatedRendering;
-    public float FoveatedPatternInnerRadii => foveatedPatternInnerRadii;
-    public float FoveatedPatternMiddleRadii => foveatedPatternMiddleRadii;
+    public FoveatedRenderingPriority FoveatedRenderPriority => foveatedRenderingPriority;
     public OCSVRWorksFoveatedRenderer.ShadingRate FoveatedShadingInnerRate => foveatedShadingInnerRate;
     public OCSVRWorksFoveatedRenderer.ShadingRate FoveatedShadingMiddleRate => foveatedShadingMiddleRate;
     public OCSVRWorksFoveatedRenderer.ShadingRate FoveatedShadingOuterRate => foveatedShadingOuterRate;
+    public Color RenderPerfGraphColorBasis => renderPerfGraphColorBasis;
+    public Color RenderPerfGraphColorOverfillOnly => renderPerfGraphColorOverfillOnly;
+    public Color RenderPerfGraphColorFoveatedOverfill => renderPerfGraphColorFoveatedOverfill;
+    public Vector2 RenderPerfGraphDefaultRangeY => renderPerfGraphDefaultRangeY;
+    public bool RenderPerfGraphAutoFitRangeY => renderPerfGraphAutoFitRangeY;
+    public int RenderPerfGraphLength => renderPerfGraphLength;
+    public bool BypassPrediction => bypassPrediction;
 
     public void ParseCommandLineArgs(string[] args) {
         Dictionary<string, string> pairs = AXRUtils.ParseCommandLine(args);
