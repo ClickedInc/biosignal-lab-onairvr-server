@@ -77,7 +77,7 @@ public static class AXRServerPlugin {
     private static extern void ocs_RegisterFramebufferTextures(int playerID, IntPtr[] textures, int textureCountPerFrame, int framebufferCount);
 
     [DllImport(Name)]
-    private static extern void ocs_GetViewNumber(int playerID, long timeStamp, 
+    private static extern void ocs_GetViewNumber(int playerID, long timeStamp, int predictionTime,
                                                  float orientationX, float orientationY, float orientationZ, float orientationW, 
                                                  float renderProjLeft, float renderProjTop, float renderProjRight, float renderProjBottom,
                                                  float encodingProjLeft, float encodingProjTop, float encodingProjRight, float encodingProjBottom,
@@ -261,8 +261,8 @@ public static class AXRServerPlugin {
         ocs_RegisterFramebufferTextures(playerID, textures, textureCountPerFrame, framebufferCount);
     }
     
-    public static void GetViewNumber(int playerID, long timestamp, Quaternion orientation, Rect renderProj, Rect encodingProj, out int viewNumber) {
-        ocs_GetViewNumber(playerID, timestamp, 
+    public static void GetViewNumber(int playerID, long timestamp, int predictionTime, Quaternion orientation, Rect renderProj, Rect encodingProj, out int viewNumber) {
+        ocs_GetViewNumber(playerID, timestamp, predictionTime,
                           orientation.x, orientation.y, orientation.z, orientation.w, 
                           renderProj.xMin, renderProj.yMax, renderProj.xMax, renderProj.yMin,
                           encodingProj.xMin, encodingProj.yMax, encodingProj.xMax, encodingProj.yMin,

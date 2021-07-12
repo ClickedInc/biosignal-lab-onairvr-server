@@ -172,7 +172,7 @@ public abstract class AirXRCameraRig : MonoBehaviour {
                                 Mathf.Min(encodingProjection.yMax, projection.yMax))
             );
 
-            AXRServerPlugin.GetViewNumber(playerID, timestamp, leftEyePose.rotation, renderProjection, encodingProjection, out _viewNumber);
+            AXRServerPlugin.GetViewNumber(playerID, timestamp, (int)(_predictiveCameraRig?.predictedMotionProvider.predictionTime ?? 0), leftEyePose.rotation, renderProjection, encodingProjection, out _viewNumber);
 
             if (bypassPrediction) {
                 updateCameraTransforms(_config, leftEyePose.position, leftEyePose.rotation);
