@@ -44,7 +44,7 @@ public class MPPPlaybackCamera : MonoBehaviour {
 
         var mat = _leftCamera.sceneTextureRenderer.material;
         if (mat.HasProperty("_Bound")) {
-            mat.SetFloat("_Opacity", _owner.settings.UseFoveatedRendering ? 1.0f : 0.0f);
+            mat.SetFloat("_Opacity", _owner.settings.VisualizeRenderingInfo && _owner.settings.UseFoveatedRendering ? 1.0f : 0.0f);
 
             mat.SetFloat("_InnerRadii", motionFrame.foveationInnerRadius);
             mat.SetFloat("_MidRadii", motionFrame.foveationMiddleRadius);

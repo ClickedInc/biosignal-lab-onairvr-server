@@ -310,7 +310,9 @@ public class MotionPredictionPlayback : MonoBehaviour {
         _sceneCamera.Apply(motionFrame, motionHead, EncodingProjectionSize);
         _playbackCamera.Apply(motionFrame, motionHead, useTimewarp, EncodingProjectionSize);
 
-        _renderPerfGraph?.AddPoint(motionHead, motionFrame);
+        if (settings.VisualizeRenderingInfo) {
+            _renderPerfGraph?.AddPoint(motionHead, motionFrame);
+        }
     }
 
     // for MPPImageCapture
