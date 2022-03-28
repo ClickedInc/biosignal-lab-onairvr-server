@@ -18,11 +18,11 @@ public class MPPRenderPerfGraph : MonoBehaviour {
     [SerializeField] private Vector2 _range = Vector2.zero;
 
     public void AddPoint(MPPMotionData motionHead, MPPMotionData motionFrame) {
-        var ideal = motionHead.projection.width * motionHead.projection.height;
-        var overfillOnly = motionFrame.projection.width * motionFrame.projection.height;
+        var ideal = motionHead.leftProjection.width * motionHead.leftProjection.height;
+        var overfillOnly = motionFrame.leftProjection.width * motionFrame.leftProjection.height;
 
-        var innerArea = calcRadiiArea(motionFrame.projection, motionFrame.foveationInnerRadius);
-        var middleArea = calcRadiiArea(motionFrame.projection, motionFrame.foveationMiddleRadius);
+        var innerArea = calcRadiiArea(motionFrame.leftProjection, motionFrame.foveationInnerRadius);
+        var middleArea = calcRadiiArea(motionFrame.leftProjection, motionFrame.foveationMiddleRadius);
         var foveatedOverfill = innerArea + (middleArea - innerArea) / 4 + (overfillOnly - middleArea) / 16;
 
         var point = new Metrics {

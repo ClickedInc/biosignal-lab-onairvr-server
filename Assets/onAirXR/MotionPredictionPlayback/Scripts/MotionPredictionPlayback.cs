@@ -55,22 +55,20 @@ public struct MPPProjection {
     public float aspect => width / height;
     public Vector2 center => new Vector2((left + right) / 2, (top + bottom) / 2);
 
-    public MPPProjection GetOtherEyeProjection(MPPProjection notOverfilledEye) {
-        var centerBiasX = notOverfilledEye.left + notOverfilledEye.right;
-
+    public MPPProjection GetOtherEyeProjection() {
         return new MPPProjection {
-            left = left - centerBiasX,
-            right = right - centerBiasX,
+            left = -right,
+            right = -left,
             top = top,
             bottom = bottom
         };
     }
 
-    public Matrix4x4 GetMatrix(float near, float far) {
-        var l = left * near;
-        var t = top * near;
-        var r = right * near;
-        var b = bottom * near;
+    public Matrix4x4 GetMatrix(float near, float far, float scale = 1.0f) {
+        var l = left * scale * near;
+        var t = top * scale * near;
+        var r = right * scale * near;
+        var b = bottom * scale * near;
 
         var result = new Matrix4x4();
         result[0, 0] = 2.0f * near / (r - l); result[0, 1] = 0; result[0, 2] = (r + l) / (r - l); result[0, 3] = 0;
@@ -80,13 +78,16 @@ public struct MPPProjection {
 
         return result;
     }
+
+    public override string ToString() => $"[{left}, {top}, {right}, {bottom}]({right - left} x {top - bottom})";
 }
 
 public struct MPPMotionData {
     public Vector3 leftEyePos;
     public Vector3 rightEyePos;
     public Quaternion orientation;
-    public MPPProjection projection;
+    public MPPProjection leftProjection;
+    public MPPProjection rightProjection;
     public float foveationInnerRadius;
     public float foveationMiddleRadius;
 }

@@ -61,7 +61,7 @@ public class AirXRPredictiveCameraRig : MonoBehaviour, AirXRCameraRigManager.Pre
 
     // handle OCSVRWorksCameraRig events
     private void updateFoveationPattern(OCSVRWorksCameraRig cameraRig) {
-        var overfillProj = predictedMotionProvider.projection;
+        var overfillProj = predictedMotionProvider.leftProjection;
         var overfillAspect = overfillProj.width / overfillProj.height;
 
         cameraRig.UpdateFoveationPatternProps(predictedMotionProvider.foveationInnerRadius,
@@ -73,13 +73,8 @@ public class AirXRPredictiveCameraRig : MonoBehaviour, AirXRCameraRigManager.Pre
         var config = this.cameraRig.GetConfig();
         if (config == null) { return; }
 
-        var leftProj = predictedMotionProvider.projection;
-        var rightProj = Rect.MinMaxRect(
-            leftProj.xMin - (config.cameraProjection[0] + config.cameraProjection[2]),
-            leftProj.yMin,
-            leftProj.xMax - (config.cameraProjection[0] + config.cameraProjection[2]),
-            leftProj.yMax
-        );
+        var leftProj = predictedMotionProvider.leftProjection;
+        var rightProj = predictedMotionProvider.rightProjection;
 
         var leftGaze = new OCSVRWorksCameraRig.GazeLocation {
             x = -leftProj.center.x / leftProj.width,
