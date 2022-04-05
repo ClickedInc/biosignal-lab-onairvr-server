@@ -209,27 +209,21 @@ public sealed class AirVRCameraRig : AirXRCameraRig, IAirXRTrackingModelContext 
         // do nothing; a stereoscopic camera must keep its inherent projection
     }
 
-    protected override void updateCameraProjection(AirXRClientConfig config, Rect renderProjection, Rect encodingProjection) {
-        float[] leftRenderProj = { renderProjection.xMin, renderProjection.yMax, renderProjection.xMax, renderProjection.yMin };
+    protected override void updateCameraProjection(AirXRClientConfig config, Rect leftRenderProj, Rect rightRenderProj, Rect leftEncodingProj, Rect rightEncodingProj) {
+        float[] leftRenderProjection = { leftRenderProj.xMin, leftRenderProj.yMax, leftRenderProj.xMax, leftRenderProj.yMin };
+        float[] rightRenderProjection = { rightRenderProj.xMin, rightRenderProj.yMax, rightRenderProj.xMax, rightRenderProj.yMin };
 
-        float centerBiasX = config.cameraProjection[0] + config.cameraProjection[2];
-        float[] rightRenderProj = {
-            renderProjection.xMin - centerBiasX,
-            renderProjection.yMax,
-            renderProjection.xMax - centerBiasX,
-            renderProjection.yMin
-        };
+        leftEyeCamera.projectionMatrix = AirXRClientConfig.CalcCameraProjectionMatrix(leftRenderProjection, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
+        rightEyeCamera.projectionMatrix = AirXRClientConfig.CalcCameraProjectionMatrix(rightRenderProjection, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
 
-        leftEyeCamera.projectionMatrix = AirXRClientConfig.CalcCameraProjectionMatrix(leftRenderProj, leftEyeCamera.nearClipPlane, leftEyeCamera.farClipPlane);
-        rightEyeCamera.projectionMatrix = AirXRClientConfig.CalcCameraProjectionMatrix(rightRenderProj, rightEyeCamera.nearClipPlane, rightEyeCamera.farClipPlane);
-
-        var viewport = new Rect(0.5f - renderProjection.width / encodingProjection.width / 2,
-                                0.5f - renderProjection.height / encodingProjection.height / 2, 
-                                renderProjection.width / encodingProjection.width,
-                                renderProjection.height / encodingProjection.height);
-
-        leftEyeCamera.rect = viewport;
-        rightEyeCamera.rect = viewport;
+        leftEyeCamera.rect = new Rect(0.5f - leftRenderProj.width / leftEncodingProj.width / 2,
+                                      0.5f - leftRenderProj.height / leftEncodingProj.height / 2,
+                                      leftRenderProj.width / leftEncodingProj.width,
+                                      leftRenderProj.height / leftEncodingProj.height);
+        rightEyeCamera.rect = new Rect(0.5f - rightRenderProj.width / rightEncodingProj.width / 2,
+                                       0.5f - rightRenderProj.height / rightEncodingProj.height / 2,
+                                       rightRenderProj.width / rightEncodingProj.width,
+                                       rightRenderProj.height / rightEncodingProj.height);
     }
 
     protected override void updateCameraTransforms(AirXRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation) {

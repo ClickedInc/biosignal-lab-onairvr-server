@@ -158,7 +158,7 @@ public abstract class AirXRCameraRig : MonoBehaviour {
                 leftEyePose = _predictiveCameraRig?.predictedMotionProvider.leftEye ?? Pose.identity;
                 rightEyePose = _predictiveCameraRig?.predictedMotionProvider.rightEye ?? Pose.identity;
                 leftProjection = _predictiveCameraRig?.predictedMotionProvider.leftProjection ?? leftProjection;
-                rightProjection = _predictiveCameraRig?.predictedMotionProvider.leftProjection ?? rightProjection;
+                rightProjection = _predictiveCameraRig?.predictedMotionProvider.rightProjection ?? rightProjection;
             }
 
             var encodingProjSize = _config.GetEncodingProjectionSize();
@@ -184,7 +184,15 @@ public abstract class AirXRCameraRig : MonoBehaviour {
                                 Mathf.Min(rightEncodingProjection.yMax, rightProjection.yMax))
             );
 
-            AXRServerPlugin.GetViewNumber(playerID, timestamp, (int)(_predictiveCameraRig?.predictedMotionProvider.predictionTime ?? 0), leftEyePose.rotation, renderProjection, encodingProjection, out _viewNumber);
+            AXRServerPlugin.GetViewNumber(playerID, 
+                                          timestamp, 
+                                          (int)(_predictiveCameraRig?.predictedMotionProvider.predictionTime ?? 0), 
+                                          leftEyePose.rotation, 
+                                          leftRenderProjection,
+                                          rightRenderProjection,
+                                          leftEncodingProjection, 
+                                          rightEncodingProjection,
+                                          out _viewNumber);
 
             if (bypassPrediction) {
                 updateCameraTransforms(_config, leftEyePose.position, leftEyePose.rotation);
@@ -193,7 +201,7 @@ public abstract class AirXRCameraRig : MonoBehaviour {
                 updateCameraTransforms(_config, leftEyePose, rightEyePose);
             }
 
-            updateCameraProjection(_config, renderProjection, encodingProjection);
+            updateCameraProjection(_config, leftRenderProjection, rightRenderProjection, leftEncodingProjection, rightEncodingProjection);
             updateControllerTransforms(_config, _predictiveCameraRig?.predictedMotionProvider, bypassPrediction);
 
             mediaStream.GetNextFramebufferTexturesAsRenderTargets(cameras);
@@ -348,7 +356,7 @@ public abstract class AirXRCameraRig : MonoBehaviour {
     protected virtual void onStartRender() { }
     protected virtual void onStopRender() { }
     protected abstract void updateCameraProjection(AirXRClientConfig config, float[] projection);
-    protected abstract void updateCameraProjection(AirXRClientConfig config, Rect renderProjection, Rect encodingProjection);
+    protected abstract void updateCameraProjection(AirXRClientConfig config, Rect leftRenderProj, Rect rightRenderProj, Rect leftEncodingProj, Rect rightEncodingProj);
     protected abstract void updateCameraTransforms(AirXRClientConfig config, Vector3 centerEyePosition, Quaternion centerEyeOrientation);
     protected abstract void updateCameraTransforms(AirXRClientConfig config, Pose leftEyePose, Pose rightEyePose);
     protected virtual void updateControllerTransforms(AirXRClientConfig config) { }

@@ -78,9 +78,11 @@ public static class AXRServerPlugin {
 
     [DllImport(Name)]
     private static extern void ocs_GetViewNumber(int playerID, long timeStamp, int predictionTime,
-                                                 float orientationX, float orientationY, float orientationZ, float orientationW, 
-                                                 float renderProjLeft, float renderProjTop, float renderProjRight, float renderProjBottom,
-                                                 float encodingProjLeft, float encodingProjTop, float encodingProjRight, float encodingProjBottom,
+                                                 float orientationX, float orientationY, float orientationZ, float orientationW,
+                                                 float renderProjLL, float renderProjLT, float renderProjLR, float renderProjLB,
+                                                 float renderProjRL, float renderProjRT, float renderProjRR, float renderProjRB,
+                                                 float encodingProjLL, float encodingProjLT, float encodingProjLR, float encodingProjLB,
+                                                 float encodingProjRL, float encodingProjRT, float encodingProjRR, float encodingProjRB,
                                                  out int viewNumber);
 
     [DllImport(Name)]
@@ -261,11 +263,13 @@ public static class AXRServerPlugin {
         ocs_RegisterFramebufferTextures(playerID, textures, textureCountPerFrame, framebufferCount);
     }
     
-    public static void GetViewNumber(int playerID, long timestamp, int predictionTime, Quaternion orientation, Rect renderProj, Rect encodingProj, out int viewNumber) {
+    public static void GetViewNumber(int playerID, long timestamp, int predictionTime, Quaternion orientation, Rect leftRenderProj, Rect rightRenderProj, Rect leftEncodingProj, Rect rightEncodingProj, out int viewNumber) {
         ocs_GetViewNumber(playerID, timestamp, predictionTime,
-                          orientation.x, orientation.y, orientation.z, orientation.w, 
-                          renderProj.xMin, renderProj.yMax, renderProj.xMax, renderProj.yMin,
-                          encodingProj.xMin, encodingProj.yMax, encodingProj.xMax, encodingProj.yMin,
+                          orientation.x, orientation.y, orientation.z, orientation.w,
+                          leftRenderProj.xMin, leftRenderProj.yMax, leftRenderProj.xMax, leftRenderProj.yMin,
+                          rightRenderProj.xMin, rightRenderProj.yMax, rightRenderProj.xMax, rightRenderProj.yMin,
+                          leftEncodingProj.xMin, leftEncodingProj.yMax, leftEncodingProj.xMax, leftEncodingProj.yMin,
+                          rightEncodingProj.xMin, rightEncodingProj.yMax, rightEncodingProj.xMax, rightEncodingProj.yMin,
                           out viewNumber);
     }
 
