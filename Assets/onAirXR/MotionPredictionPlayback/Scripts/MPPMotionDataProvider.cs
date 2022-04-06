@@ -18,10 +18,12 @@ public abstract class MPPMotionDataProvider {
     protected void adjustFrameProjectionOverfilling(AirXRServerSettings.OverfillMode mode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead) {
         switch (mode) {
             case AirXRServerSettings.OverfillMode.Optimal:
-                motionFrame.projection = MPPUtils.calcOptimalOverfilling(motionHead.orientation, motionFrame.orientation, motionHead.projection);
+                motionFrame.leftProjection = MPPUtils.calcOptimalOverfilling(motionHead.orientation, motionFrame.orientation, motionHead.leftProjection);
+                motionFrame.rightProjection = MPPUtils.calcOptimalOverfilling(motionHead.orientation, motionFrame.orientation, motionHead.rightProjection);
                 break;
             case AirXRServerSettings.OverfillMode.None:
-                motionFrame.projection = motionHead.projection;
+                motionFrame.leftProjection = motionHead.leftProjection;
+                motionFrame.rightProjection = motionHead.rightProjection;
                 break;
         }
     }
@@ -134,7 +136,7 @@ public class MPPMotionDataFile : MPPMotionDataProvider {
             if (doesCursorReachToEnd(cursorForHead + 1)) { return false; }
 
             var dataForFrame = Read(_cursor);
-            var predictionTime = (double)dataForFrame["prediction_time"] / 1000.0;
+            var predictionTime = 0.12f; //(double)dataForFrame["prediction_time"] / 1000.0;
             var framets = MPPUtils.FlicksToSecond((double)dataForFrame["timestamp"]);
 
             var headts = MPPUtils.FlicksToSecond((double)Read(cursorForHead + 1)["timestamp"]);
@@ -160,7 +162,9 @@ public class MPPMotionDataFile : MPPMotionDataProvider {
         var leftEyePosPrefix = predictive ? "predicted_left_eye_position_" : "input_left_eye_position_";
         var rightEyePosPrefix = predictive ? "predicted_right_eye_position_" : "input_right_eye_position_";
         var orientationPrefix = predictive ? "predicted_head_orientation_" : "input_head_orientation_";
-        var projectionPrefix = predictive ? "predicted_camera_projection_" : "input_camera_projection_";
+        var inputProjectionPrefix = "input_camera_projection_";
+        var predictedLeftProjectionPrefix = "predicted_left_camera_projection_";
+        var predictedRightProjectionPrefix = "predicted_right_camera_projection_";
 
         var data = Read(cursor);
 
@@ -175,12 +179,32 @@ public class MPPMotionDataFile : MPPMotionDataProvider {
                                          -(float)(double)data[orientationPrefix + "y"],
                                          (float)(double)data[orientationPrefix + "z"],
                                          (float)(double)data[orientationPrefix + "w"]),
-            projection = new MPPProjection {
-                left = (float)(double)data[projectionPrefix + "left"],
-                top = (float)(double)data[projectionPrefix + "top"],
-                right = (float)(double)data[projectionPrefix + "right"],
-                bottom = (float)(double)data[projectionPrefix + "bottom"]
-            },
+            leftProjection = predictive? 
+                new MPPProjection {
+                    left = (float)(double)data[predictedLeftProjectionPrefix + "left"],
+                    top = (float)(double)data[predictedLeftProjectionPrefix + "top"],
+                    right = (float)(double)data[predictedLeftProjectionPrefix + "right"],
+                    bottom = (float)(double)data[predictedLeftProjectionPrefix + "bottom"]
+                } : 
+                new MPPProjection {
+                    left = (float)(double)data[inputProjectionPrefix + "left"],
+                    top = (float)(double)data[inputProjectionPrefix + "top"],
+                    right = (float)(double)data[inputProjectionPrefix + "right"],
+                    bottom = (float)(double)data[inputProjectionPrefix + "bottom"]
+                },
+            rightProjection = predictive ?
+                new MPPProjection {
+                    left = (float)(double)data[predictedRightProjectionPrefix + "left"],
+                    top = (float)(double)data[predictedRightProjectionPrefix + "top"],
+                    right = (float)(double)data[predictedRightProjectionPrefix + "right"],
+                    bottom = (float)(double)data[predictedRightProjectionPrefix + "bottom"]
+                } :
+                new MPPProjection {
+                    left = -(float)(double)data[inputProjectionPrefix + "right"],
+                    top = (float)(double)data[inputProjectionPrefix + "top"],
+                    right = -(float)(double)data[inputProjectionPrefix + "left"],
+                    bottom = (float)(double)data[inputProjectionPrefix + "bottom"]
+                },
             foveationInnerRadius = predictive ? (float)(double)data["predicted_foveation_inner_radius"] : DefaultFoveationInnerRadius,
             foveationMiddleRadius = predictive ? (float)(double)data["predicted_foveation_middle_radius"] : DefaultFoveationMiddleRadius
         };
@@ -193,7 +217,8 @@ public class MPPLiveMotionDataProvider : MPPMotionDataProvider {
 
     public void Put(long timestamp, float predictionTime,
                     Pose inputLeftEye, Pose inputRightEye, MPPProjection inputProjection, Pose inputRightHand,
-                    Pose predictedLeftEye, Pose predictedRightEye, MPPProjection predictedProjection,
+                    Pose predictedLeftEye, Pose predictedRightEye, 
+                    MPPProjection predictedLeftProjection, MPPProjection predictedRightProjection,
                     float foveationInnerRadius, float foveationMiddleRadius, Pose predictedRightHand) {
         if (_queue.Count > 0 && _queue.Last().timestamp >= timestamp) { return; }
 
@@ -206,7 +231,8 @@ public class MPPLiveMotionDataProvider : MPPMotionDataProvider {
             inputRightHand = inputRightHand,
             predictedLeftEye = predictedLeftEye,
             predictedRightEye = predictedRightEye,
-            predictedProjection = predictedProjection,
+            predictedLeftProjection = predictedLeftProjection,
+            predictedRightProjection = predictedRightProjection,
             predictedFoveationInnerRadius = foveationInnerRadius,
             predictedFoveationMiddleRadius = foveationMiddleRadius,
             predictedRightHand = predictedRightHand
@@ -243,7 +269,8 @@ public class MPPLiveMotionDataProvider : MPPMotionDataProvider {
             leftEyePos = predictive ? frame.predictedLeftEye.position : frame.inputLeftEye.position,
             rightEyePos = predictive ? frame.predictedRightEye.position : frame.inputRightEye.position,
             orientation = predictive ? frame.predictedLeftEye.rotation : frame.inputLeftEye.rotation,
-            projection = predictive ? frame.predictedProjection : frame.inputProjection,
+            leftProjection = predictive ? frame.predictedLeftProjection : frame.inputProjection,
+            rightProjection = predictive ? frame.predictedRightProjection : frame.inputProjection.GetOtherEyeProjection(),
             foveationInnerRadius = predictive ? frame.predictedFoveationInnerRadius : DefaultFoveationInnerRadius,
             foveationMiddleRadius = predictive ? frame.predictedFoveationMiddleRadius : DefaultFoveationMiddleRadius
         };
@@ -252,7 +279,8 @@ public class MPPLiveMotionDataProvider : MPPMotionDataProvider {
             leftEyePos = head.inputLeftEye.position,
             rightEyePos = head.inputRightEye.position,
             orientation = head.inputLeftEye.rotation,
-            projection = head.inputProjection,
+            leftProjection = head.inputProjection,
+            rightProjection = head.inputProjection.GetOtherEyeProjection(),
             foveationInnerRadius = DefaultFoveationInnerRadius,
             foveationMiddleRadius = DefaultFoveationMiddleRadius
         };
@@ -273,7 +301,8 @@ public class MPPLiveMotionDataProvider : MPPMotionDataProvider {
 
         public Pose predictedLeftEye;
         public Pose predictedRightEye;
-        public MPPProjection predictedProjection;
+        public MPPProjection predictedLeftProjection;
+        public MPPProjection predictedRightProjection;
         public float predictedFoveationInnerRadius;
         public float predictedFoveationMiddleRadius;
         public Pose predictedRightHand;

@@ -21,30 +21,29 @@ public class MPPSceneCamera : MonoBehaviour {
         _rightEyeAnchor.localPosition = motionFrame.rightEyePos;
         _leftEyeAnchor.localRotation = _rightEyeAnchor.localRotation = motionFrame.orientation;
 
-        var leftProjection = motionFrame.projection;
-        var rightProjection = leftProjection.GetOtherEyeProjection(motionHead.projection);
+        _leftEyeCamera.projectionMatrix = motionFrame.leftProjection.GetMatrix(_leftEyeCamera.nearClipPlane, _leftEyeCamera.farClipPlane);
+        _rightEyeCamera.projectionMatrix = motionFrame.rightProjection.GetMatrix(_rightEyeCamera.nearClipPlane, _rightEyeCamera.farClipPlane);
 
-        _leftEyeCamera.projectionMatrix = leftProjection.GetMatrix(_leftEyeCamera.nearClipPlane, _leftEyeCamera.farClipPlane);
-        _rightEyeCamera.projectionMatrix = rightProjection.GetMatrix(_rightEyeCamera.nearClipPlane, _rightEyeCamera.farClipPlane);
-
-        var viewport = new Rect(0.5f - leftProjection.width / encodingProjSize.x / 2,
-                                0.5f - leftProjection.height / encodingProjSize.y / 2,
-                                leftProjection.width / encodingProjSize.x,
-                                leftProjection.height / encodingProjSize.y);
-        _leftEyeCamera.rect = viewport;
-        _rightEyeCamera.rect = viewport;
+        _leftEyeCamera.rect = new Rect(0.5f - motionFrame.leftProjection.width / encodingProjSize.x / 2,
+                                       0.5f - motionFrame.leftProjection.height / encodingProjSize.y / 2,
+                                       motionFrame.leftProjection.width / encodingProjSize.x,
+                                       motionFrame.leftProjection.height / encodingProjSize.y); ;
+        _rightEyeCamera.rect = new Rect(0.5f - motionFrame.rightProjection.width / encodingProjSize.x / 2,
+                                        0.5f - motionFrame.rightProjection.height / encodingProjSize.y / 2,
+                                        motionFrame.rightProjection.width / encodingProjSize.x,
+                                        motionFrame.rightProjection.height / encodingProjSize.y); ;
 
         _leftEyeCamera.targetTexture.Release();
         _rightEyeCamera.targetTexture.Release();
 
         _foveationPatternInnerRadius = motionFrame.foveationInnerRadius;
         _foveationPatternMiddleRadius = motionFrame.foveationMiddleRadius;
-        _foveationPatternScale = 1 / (leftProjection.aspect >= 1.0f ? leftProjection.height : leftProjection.width);
+        _foveationPatternScale = 1 / (motionFrame.leftProjection.aspect >= 1.0f ? motionFrame.leftProjection.height : motionFrame.leftProjection.width);
 
-        _leftGazeLocation.x = -leftProjection.center.x / leftProjection.width;
-        _leftGazeLocation.y = -leftProjection.center.y / leftProjection.height;
-        _rightGazeLocation.x = -rightProjection.center.x / leftProjection.width;
-        _rightGazeLocation.y = -rightProjection.center.y / leftProjection.height;
+        _leftGazeLocation.x = -motionFrame.leftProjection.center.x / motionFrame.leftProjection.width;
+        _leftGazeLocation.y = -motionFrame.leftProjection.center.y / motionFrame.leftProjection.height;
+        _rightGazeLocation.x = -motionFrame.rightProjection.center.x / motionFrame.rightProjection.width;
+        _rightGazeLocation.y = -motionFrame.rightProjection.center.y / motionFrame.rightProjection.height;
     }
 
     public void Render() {

@@ -94,7 +94,7 @@ public sealed class AirViewCameraRig : AirXRCameraRig {
 #endif
     }
 
-    protected override void updateCameraProjection(AirXRClientConfig config, Rect renderProjection, Rect encodingProjection) {
+    protected override void updateCameraProjection(AirXRClientConfig config, Rect leftRenderProj, Rect rightRenderProj, Rect leftEncodingProj, Rect rightEncodingProj) {
         // do nothing
     }
 

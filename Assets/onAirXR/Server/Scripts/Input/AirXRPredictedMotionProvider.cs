@@ -14,7 +14,8 @@ public class AirXRPredictedMotionProvider {
 
     public long timestamp { get; private set; }
     public float predictionTime { get; private set; }
-    public Rect projection { get; private set; }
+    public Rect leftProjection { get; private set; }
+    public Rect rightProjection { get; private set; }
     public Pose leftEye { get; private set; }
     public Pose rightEye { get; private set; }
     public float foveationInnerRadius { get; private set; }
@@ -41,7 +42,7 @@ public class AirXRPredictedMotionProvider {
 
     public void Update() {
         if (_owner.bypassPrediction) {
-            projection = Rect.MinMaxRect(-1, -1, 1, 1);
+            leftProjection = rightProjection = Rect.MinMaxRect(-1, -1, 1, 1);
             return;
         }
 
@@ -57,7 +58,7 @@ public class AirXRPredictedMotionProvider {
 
             if (BitConverter.IsLittleEndian) {
                 Array.Reverse(_msgRecv.Data, 0, 8);
-                for (int i = 0; i < 45; i++) {
+                for (int i = 0; i < 49; i++) {
                     Array.Reverse(_msgRecv.Data, 8 + i * 4, 4);
                 }
             }
@@ -79,7 +80,8 @@ public class AirXRPredictedMotionProvider {
             leftEye = new Pose(leftEyePosition, headOrientation);
             rightEye = new Pose(rightEyePosition, headOrientation);
 
-            projection = getProjection(_msgRecv.Data, ref pos);
+            leftProjection = getProjection(_msgRecv.Data, ref pos);
+            rightProjection = getProjection(_msgRecv.Data, ref pos);
 
             foveationInnerRadius = getFloat(_msgRecv.Data, ref pos);
             foveationMiddleRadius = getFloat(_msgRecv.Data, ref pos);
@@ -98,14 +100,12 @@ public class AirXRPredictedMotionProvider {
                 externalInputPredictivePress = predictedPress;
             }
 
-            //var offsetX = Mathf.Sin(Time.realtimeSinceStartup) / 2;
-            //var offsetY = Mathf.Cos(Time.realtimeSinceStartup) / 2;
-            //projection = Rect.MinMaxRect(-1.0f + offsetX, -1.0f + offsetY, 1.0f + offsetX, 1.0f + offsetY);
-
             _motionDataProvider.Put(timestamp, predictionTime,
                                     new Pose(inputLeftEyePosition, inputHeadOrientation), new Pose(inputRightEyePosition, inputHeadOrientation),
                                     MPPProjection.FromRect(inputProjection), inputRightHandPose,
-                                    leftEye, rightEye, MPPProjection.FromRect(projection), foveationInnerRadius, foveationMiddleRadius, rightHand);
+                                    leftEye, rightEye, 
+                                    MPPProjection.FromRect(leftProjection), MPPProjection.FromRect(rightProjection),
+                                    foveationInnerRadius, foveationMiddleRadius, rightHand);
         }
     }
 
