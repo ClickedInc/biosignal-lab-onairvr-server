@@ -79,7 +79,7 @@ public class MPPPlaybackCamera : MonoBehaviour {
         _leftCamera.Init(_owner.settings.VisualizeRenderingInfo);
         _rightCamera.Init(_owner.settings.VisualizeRenderingInfo);
 
-        var pos = Vector3.forward; //* _owner.settings.PreviewRenderScale;
+        var pos = Vector3.forward;
         _leftCamera.sceneTexture.localPosition = pos;
         _rightCamera.sceneTexture.localPosition = pos;
         _leftCamera.eyeViewport.transform.localPosition = pos;
