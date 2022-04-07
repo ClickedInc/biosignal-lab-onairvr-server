@@ -221,6 +221,8 @@ public class MotionPredictionPlayback : MonoBehaviour {
     }
 
     private IEnumerator runEndOfFrameLoop() {
+        (int frame, int head) cursor = (0, 0);
+
         while (_runningEndOfFrameLoop) {
             yield return new WaitForEndOfFrame();
 
@@ -235,7 +237,7 @@ public class MotionPredictionPlayback : MonoBehaviour {
                         break;
                     }
 
-                    updateCameras(playbackMode);
+                    updateCameras(playbackMode, ref cursor);
                     break;
                 case PlaybackState.Capturing:
                     if (_motionData.reachedToEnd) {
@@ -243,19 +245,19 @@ public class MotionPredictionPlayback : MonoBehaviour {
                         break;
                     }
 
-                    updateCameras(playbackMode);
+                    updateCameras(playbackMode, ref cursor);
 
                     _sceneCamera.Render();
                     _playbackCamera.RenderToCapture();
 
-                    _imageCapture.Capture(_motionData.currentTimestamp, playbackMode);
+                    _imageCapture.Capture(cursor, _motionData.currentTimestamp, playbackMode);
 
                     _motionData.AdvanceToNext(false);
                     break;
                 case PlaybackState.Realtime:
                     _motionData.AdvanceToNext(true);
 
-                    updateCameras(playbackMode);
+                    updateCameras(playbackMode, ref cursor);
                     break;
             }
         }
@@ -296,13 +298,13 @@ public class MotionPredictionPlayback : MonoBehaviour {
         }
     }
 
-    private void updateCameras(PlaybackMode mode) {
+    private void updateCameras(PlaybackMode mode, ref (int frame, int head) cursor) {
         var usePredict = mode == PlaybackMode.Predict_NoTimeWarp || mode == PlaybackMode.Predict_TimeWarp;
         var useTimewarp = mode == PlaybackMode.NotPredict_TimeWarp || mode == PlaybackMode.Predict_TimeWarp;
 
         var motionFrame = new MPPMotionData();
         var motionHead = new MPPMotionData();
-        if (_motionData.GetCurrentMotion(usePredict, settings.OverfillingMode, ref motionFrame, ref motionHead) == false) { return; }
+        if (_motionData.GetCurrentMotion(usePredict, settings.OverfillingMode, ref motionFrame, ref motionHead, ref cursor) == false) { return; }
 
         //var offsetX = Mathf.Sin(Time.realtimeSinceStartup) / 2;
         //var offsetY = Mathf.Cos(Time.realtimeSinceStartup) / 2;

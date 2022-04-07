@@ -23,7 +23,7 @@ public class MPPImageCapture {
         }
     }
 
-    public void Capture(double time, MotionPredictionPlayback.PlaybackMode playbackMode) {
+    public void Capture((int frame, int head) cursor, double time, MotionPredictionPlayback.PlaybackMode playbackMode) {
         if (string.IsNullOrEmpty(outputPath) || _source == null) { return; }
 
         var desc = toPlaybackModeString(playbackMode);
@@ -39,7 +39,7 @@ public class MPPImageCapture {
         image.ReadPixels(new Rect(0, 0, image.width, image.height), 0, 0);
         image.Apply();
 
-        File.WriteAllBytes(screenshotName(path, _seqnum, time, desc), image.EncodeToPNG());
+        File.WriteAllBytes(screenshotName(path, cursor, time, desc), image.EncodeToPNG());
 
         RenderTexture.active = oldrt;
         Object.Destroy(image);
@@ -64,7 +64,7 @@ public class MPPImageCapture {
         }
     }
 
-    private string screenshotName(string folder, int seqnum, double time, string desc) {
-        return Path.Combine(folder, string.Format("{0}_{1:#.000}_{2}.png", seqnum, time, desc));
+    private string screenshotName(string folder, (int frame, int head) cursor, double time, string desc) {
+        return Path.Combine(folder, $"{string.Format("{0:#.000}", time)}_f{cursor.frame}-h{cursor.head}_{desc}.png");
     }
 }

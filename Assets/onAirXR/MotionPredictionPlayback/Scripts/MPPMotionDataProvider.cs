@@ -13,7 +13,7 @@ public abstract class MPPMotionDataProvider {
     public abstract bool reachedToEnd { get; }
     public abstract double currentTimestamp { get; }
     public abstract void AdvanceToNext(bool realtime);
-    public abstract bool GetCurrentMotion(bool predictive, AirXRServerSettings.OverfillMode overfillingMode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead);
+    public abstract bool GetCurrentMotion(bool predictive, AirXRServerSettings.OverfillMode overfillingMode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead, ref (int frame, int head) cursor);
 
     protected void adjustFrameProjectionOverfilling(AirXRServerSettings.OverfillMode mode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead) {
         switch (mode) {
@@ -130,18 +130,20 @@ public class MPPMotionDataFile : MPPMotionDataProvider {
         }
     }
 
-    public override bool GetCurrentMotion(bool predictive, AirXRServerSettings.OverfillMode overfillingMode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead) {
+    public override bool GetCurrentMotion(bool predictive, AirXRServerSettings.OverfillMode overfillingMode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead, ref (int frame, int head) cursor) {
+        cursor.frame = cursor.head = 0;
+
         var cursorForHead = _cursor;
         if (type == Type.Raw) {
-            if (doesCursorReachToEnd(cursorForHead + 1)) { return false; }
+            if (cursorForHead + 1 >= count) { return false; }
 
             var dataForFrame = Read(_cursor);
-            var predictionTime = 0.12f; //(double)dataForFrame["prediction_time"] / 1000.0;
+            var predictionTime = (double)dataForFrame["prediction_time"] / 1000.0;
             var framets = MPPUtils.FlicksToSecond((double)dataForFrame["timestamp"]);
 
             var headts = MPPUtils.FlicksToSecond((double)Read(cursorForHead + 1)["timestamp"]);
             while (headts - framets < predictionTime) {
-                if (doesCursorReachToEnd(cursorForHead + 2)) { return false; }
+                if (cursorForHead + 2 >= count) { return false; }
 
                 cursorForHead++;
                 headts = MPPUtils.FlicksToSecond((double)Read(cursorForHead + 1)["timestamp"]);
@@ -152,7 +154,9 @@ public class MPPMotionDataFile : MPPMotionDataProvider {
             readMotionData(false, cursorForHead, ref motionHead) == false) { return false; }
 
         adjustFrameProjectionOverfilling(overfillingMode, ref motionFrame, ref motionHead);
-        
+
+        cursor.frame = _cursor;
+        cursor.head = cursorForHead;
         return true;
     }
 
@@ -259,7 +263,7 @@ public class MPPLiveMotionDataProvider : MPPMotionDataProvider {
         }
     }
 
-    public override bool GetCurrentMotion(bool predictive, AirXRServerSettings.OverfillMode overfillingMode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead) {
+    public override bool GetCurrentMotion(bool predictive, AirXRServerSettings.OverfillMode overfillingMode, ref MPPMotionData motionFrame, ref MPPMotionData motionHead, ref (int frame, int head) cursor) {
         if (_queue.Count == 0) { return false; }
         
         var frame = _queue.Peek();
