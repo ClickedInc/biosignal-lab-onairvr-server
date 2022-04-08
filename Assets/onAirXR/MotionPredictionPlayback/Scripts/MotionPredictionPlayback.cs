@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Assertions;
 using UnityEditor;
+using ClipperLib;
 
 [Serializable]
 public class UnityEventWithFloat : UnityEvent<float> { }
@@ -79,6 +80,16 @@ public struct MPPProjection {
         return result;
     }
 
+    public List<IntPoint> GetProjectionPath(float scale) {
+        var result = new List<IntPoint>();
+        result.Add(new IntPoint(right * scale, top * scale));
+        result.Add(new IntPoint(left * scale, top * scale));
+        result.Add(new IntPoint(left * scale, bottom * scale));
+        result.Add(new IntPoint(right * scale, bottom * scale));
+
+        return result;
+    }
+
     public override string ToString() => $"[{left}, {top}, {right}, {bottom}]({right - left} x {top - bottom})";
 }
 
@@ -90,10 +101,56 @@ public struct MPPMotionData {
     public MPPProjection rightProjection;
     public float foveationInnerRadius;
     public float foveationMiddleRadius;
+
+    public double CalcProjectionCoverage(MPPMotionData coverProjection) {
+        var leftCoverage = calcProjectionCoverage(orientation, leftProjection, coverProjection.orientation, coverProjection.leftProjection);
+        var rightCoverage = calcProjectionCoverage(orientation, rightProjection, coverProjection.orientation, coverProjection.rightProjection);
+
+        return (leftCoverage + rightCoverage) / 2;
+    }
+
+    private double calcProjectionCoverage(Quaternion subjectOrientation, MPPProjection subjectProj, Quaternion clippingOrientation, MPPProjection clippingProj) {
+        const float Scale = 100000;
+
+        var deltaRotation = Quaternion.Inverse(subjectOrientation) * clippingOrientation;
+
+        var subjectPath = subjectProj.GetProjectionPath(Scale);
+        var clippingPath = rotatePath(clippingProj.GetProjectionPath(Scale), deltaRotation, Scale);
+
+        return calcCoverage(subjectPath, clippingPath);
+    }
+
+    private double calcCoverage(List<IntPoint> subject, List<IntPoint> clipping) {
+        var clipper = new Clipper();
+        clipper.StrictlySimple = true;
+
+        var solution = new List<List<IntPoint>>();
+        clipper.AddPath(subject, PolyType.ptSubject, true);
+        clipper.AddPath(clipping, PolyType.ptClip, true);
+        if (clipper.Execute(ClipType.ctIntersection, solution) == false ||
+            solution.Count != 1) { return 0; }
+
+        var areaIntersection = Clipper.Area(solution[0]);
+        var areaSubject = Clipper.Area(subject);
+
+        return areaIntersection / areaSubject;
+    }
+
+    private List<IntPoint> rotatePath(List<IntPoint> path, Quaternion rotation, float scale) {
+        var result = new List<IntPoint>();
+
+        foreach (var point in path) {
+            var vec = new Vector3(point.X, point.Y, scale);
+            var rotated = rotation * vec;
+
+            result.Add(new IntPoint(rotated.x * (scale / rotated.z), rotated.y * (scale / rotated.z)));
+        }
+        return result;
+    }
 }
 
 public class MotionPredictionPlayback : MonoBehaviour {
-    public readonly static Vector2 EncodingProjectionSize = new Vector2(4.0f, 4.0f);
+    public readonly static Vector2 EncodingProjectionSize = new Vector2(8.0f, 8.0f);
     public const string PrefKeyInputMotionDataFile = "kr.co.clicked.biosignal.motiondatafile";
     public const string PrefKeyCaptureOutputPath = "kr.co.clicked.biosignal.captureoutputpath";
 
@@ -229,7 +286,7 @@ public class MotionPredictionPlayback : MonoBehaviour {
             if (playbackState == PlaybackState.Stopped || EditorApplication.isPaused) { continue; }
 
             switch (playbackState) {
-                case PlaybackState.Playing:
+                case PlaybackState.Playing: {
                     _motionData.AdvanceToNext(true);
 
                     if (_motionData.reachedToEnd) {
@@ -239,21 +296,23 @@ public class MotionPredictionPlayback : MonoBehaviour {
 
                     updateCameras(playbackMode, ref cursor);
                     break;
-                case PlaybackState.Capturing:
+                }
+                case PlaybackState.Capturing: {
                     if (_motionData.reachedToEnd) {
                         transitPlaybackStateTo(PlaybackState.Stopped);
                         break;
                     }
 
-                    updateCameras(playbackMode, ref cursor);
+                    var (motionFrame, motionHead) = updateCameras(playbackMode, ref cursor);
 
                     _sceneCamera.Render();
                     _playbackCamera.RenderToCapture();
 
-                    _imageCapture.Capture(cursor, _motionData.currentTimestamp, playbackMode);
+                    _imageCapture.Capture(_motionData.currentTimestamp, cursor, motionFrame, motionHead, playbackMode);
 
                     _motionData.AdvanceToNext(false);
                     break;
+                }
                 case PlaybackState.Realtime:
                     _motionData.AdvanceToNext(true);
 
@@ -298,24 +357,26 @@ public class MotionPredictionPlayback : MonoBehaviour {
         }
     }
 
-    private void updateCameras(PlaybackMode mode, ref (int frame, int head) cursor) {
+    private (MPPMotionData frame, MPPMotionData head) updateCameras(PlaybackMode mode, ref (int frame, int head) cursor) {
         var usePredict = mode == PlaybackMode.Predict_NoTimeWarp || mode == PlaybackMode.Predict_TimeWarp;
         var useTimewarp = mode == PlaybackMode.NotPredict_TimeWarp || mode == PlaybackMode.Predict_TimeWarp;
 
         var motionFrame = new MPPMotionData();
         var motionHead = new MPPMotionData();
-        if (_motionData.GetCurrentMotion(usePredict, settings.OverfillingMode, ref motionFrame, ref motionHead, ref cursor) == false) { return; }
+        if (_motionData.GetCurrentMotion(usePredict, settings.OverfillingMode, ref motionFrame, ref motionHead, ref cursor)) {
+            //var offsetX = Mathf.Sin(Time.realtimeSinceStartup) / 2;
+            //var offsetY = Mathf.Cos(Time.realtimeSinceStartup) / 2;
+            //motionFrame.projection = new MPPProjection { left = -1.0f + offsetX, top = 1.0f + offsetY, right = 1.0f + offsetX, bottom = -1.0f + offsetY };
 
-        //var offsetX = Mathf.Sin(Time.realtimeSinceStartup) / 2;
-        //var offsetY = Mathf.Cos(Time.realtimeSinceStartup) / 2;
-        //motionFrame.projection = new MPPProjection { left = -1.0f + offsetX, top = 1.0f + offsetY, right = 1.0f + offsetX, bottom = -1.0f + offsetY };
+            _sceneCamera.Apply(motionFrame, motionHead, EncodingProjectionSize);
+            _playbackCamera.Apply(motionFrame, motionHead, useTimewarp, EncodingProjectionSize);
 
-        _sceneCamera.Apply(motionFrame, motionHead, EncodingProjectionSize);
-        _playbackCamera.Apply(motionFrame, motionHead, useTimewarp, EncodingProjectionSize);
-
-        if (settings.VisualizeRenderingInfo) {
-            _renderPerfGraph?.AddPoint(motionHead, motionFrame);
+            if (settings.VisualizeRenderingInfo) {
+                _renderPerfGraph?.AddPoint(motionHead, motionFrame);
+            }
         }
+
+        return (motionFrame, motionHead);
     }
 
     // for MPPImageCapture
