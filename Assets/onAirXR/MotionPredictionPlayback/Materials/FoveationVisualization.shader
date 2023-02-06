@@ -77,7 +77,7 @@
 
             float tintOpacity(v2f i)
             {
-                float4 bound = 0.5 + _Bound / 4;
+                float4 bound = 0.5 + _Bound / 8;
 
                 return inrange(bound.x, bound.z, i.uv.x) * inrange(bound.w, bound.y, i.uv.y) * _Opacity;
             }
