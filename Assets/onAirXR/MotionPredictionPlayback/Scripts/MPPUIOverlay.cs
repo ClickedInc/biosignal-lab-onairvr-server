@@ -74,6 +74,8 @@ public class MPPUIOverlay : MonoBehaviour {
             "NotPredict_NoTimeWarp",
             "NotPredict_TimeWarp"
         });
+
+        _liveMode.SetValueWithoutNotify((int)_owner.playbackMode);
     }
 
     private void Update() {

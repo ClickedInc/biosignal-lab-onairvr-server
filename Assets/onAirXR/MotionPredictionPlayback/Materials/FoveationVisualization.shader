@@ -71,8 +71,8 @@
                 float2 center = float2(0.5 + _GazeX / 4, 0.5 + _GazeY / 4);
                 float distance = length(center - i.uv);
 
-                return inrange(0, _InnerRadii / 4, distance) * fixed4(0, 0, 0, 0) + inrange(_InnerRadii / 4, _MidRadii / 4, distance) * _MidColor +
-                        step(_MidRadii / 4, distance) * _OuterColor;
+                return inrange(0, _InnerRadii / 8, distance) * fixed4(0, 0, 0, 0) + inrange(_InnerRadii / 8, _MidRadii / 8, distance) * _MidColor +
+                        step(_MidRadii / 8, distance) * _OuterColor;
             }
 
             float tintOpacity(v2f i)
